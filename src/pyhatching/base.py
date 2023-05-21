@@ -5,7 +5,7 @@ import json
 from typing import Any, Optional
 
 import aiohttp
-from pydantic import BaseModel  # pylint: disable=E0611
+from pydantic import BaseModel, Field  # pylint: disable=E0611
 from pydantic.error_wrappers import (  # pylint: disable=E0611
     ErrorWrapper,
     ValidationError,
@@ -53,6 +53,21 @@ class YaraRules(HatchingResponse):
     """A list of yara rules."""
 
     rules: list[YaraRule]
+
+
+class HatchingProfile(BaseModel):
+    """A Hatching Triage Sandbox analysis profile."""
+
+    name: str
+    network: enums.ProfileNetworkOptions
+    timeout: int
+    tags: list[str] = Field(default_factory=list)
+
+
+class HatchingProfileResponse(HatchingProfile, HatchingResponse):
+    """A HatchingProfile but with `id` and `resp_obj` props."""
+
+    id: str
 
 
 class HatchingRequest(BaseModel):
@@ -196,7 +211,10 @@ class Credentials(BaseModel):
 
     @classmethod
     def parse_obj(cls, obj: Any) -> "Credentials":
-        """A custom parsing method to read in "pass" from a dict."""
+        """A custom parsing method to read in "pass" from a dict.
+        
+        Mostly copies `BaseModel.parse_obj`.
+        """
 
         obj = cls._enforce_dict_if_root(obj)
         if not isinstance(obj, dict):
@@ -213,13 +231,23 @@ class Credentials(BaseModel):
 
         return cls(**obj)
 
-    def dict(self, **kwargs: dict) -> dict:  # pylint: disable=W0613
+    def dict(self, **kwargs: dict) -> dict:
         """Custom dict to get rid of the _ in pass_.
 
-        Doesn't support to BaseModel.dict.
+        Attempts to replicate `BaseModel.dict` by copying the `self._iter` call.
         """
 
-        ret: dict = vars(self)
+        ret = dict(
+            self._iter(
+                to_dict=True,
+                by_alias=kwargs.get("by_alias", None),
+                include=kwargs.get("include", None),
+                exclude=kwargs.get("exclude", None),
+                exclude_unset=kwargs.get("exclude_unset", None),
+                exclude_defaults=kwargs.get("exclude_defaults", None),
+                exclude_none=kwargs.get("exclude_none", None),
+            )
+        )
 
         if "pass_" in ret:
             ret["pass"] = ret.pop("pass_")

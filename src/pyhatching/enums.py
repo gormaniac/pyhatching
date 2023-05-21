@@ -72,6 +72,29 @@ class ErrorDesc(Enum):
     INTERNAL: str = "The request was valid, but the server could not process it."
 
 
+class ProfileNetworkOptions(Enum):
+    """Available network options for sandbox analysis.
+    
+    Parameters
+    ----------
+    "": The system default
+    "drop": Disable networking.
+    "internet": Allow connections to the internet.
+    "tor": Route internet through the Tor network.
+    "sim200": InetSim-like functionality with HTTP 200 responses.
+    "sim404": InetSim-like functionality with HTTP 404 responses.
+    "simnx": InetSim-like functionality with DNS NXDOMAIN responses.
+    """
+
+    DEFAULT: str = ""
+    DROP: str = "drop"
+    INTERNET: str = "internet"
+    TOR: str = "tor"
+    SIM200: str = "sim200"
+    SIM404: str = "sim404"
+    SIMNX: str = "simnx"
+
+
 class AvailableTags(Enum):
     """All tags supported by Hatching Triage."""
 

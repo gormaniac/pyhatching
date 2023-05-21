@@ -5,9 +5,11 @@ from json import JSONDecodeError
 import pathlib
 
 import aiohttp
+
 # from pydantic.error_wrappers import ValidationError
 
 from . import base
+from . import enums
 from . import VERSION
 
 
@@ -30,6 +32,11 @@ class PyHatchingParseError(PyHatchingError):
 class PyHatchingClient:
     """An async HTTP client that interfaces with the Hatching Triage Sandbox.
 
+    Any method that makes HTTP requests (calls `_request`) may raise either a
+    `PyHatchingRequestError` or `PyHatchingParseError`. If the specific method
+    also explicitly raises exceptions, it will be documented.
+    Catch all handled errors with `PyHatchingError`.
+
     Parameters
     ----------
     api_key : str
@@ -44,10 +51,10 @@ class PyHatchingClient:
     api_key : str
     headers : dict
         The headers used with every request, has API key and custom User Agent.
-    timeout : aiohttp.ClientTimeout
-        The timeout object used by the underlying ClientSession.
     session : aiohttp.ClientSession
         The underlying ClientSession used to make requests.
+    timeout : aiohttp.ClientTimeout
+        The timeout object used by `session`.
     """
 
     def __init__(self, api_key: str, url: str = BASE_URL, timeout: int = 60) -> None:
@@ -74,7 +81,9 @@ class PyHatchingClient:
         Returns both the response and the deserialized JSON response.
 
         The response and deserialized JSON are returned regardless of the HTTP
-        status code. This way, endpoint specific methods can handle errors.
+        status code. This way, endpoint specific methods can handle errors. We
+        can trust the API to return proper errors, so we'll only raise when there
+        are connection issues or unexpected responses.
 
         Parameters
         ----------
@@ -137,6 +146,37 @@ class PyHatchingClient:
             The downloaded bytes.
         None
             If no bytes can be downloaded.
+        """
+
+    async def get_profile(
+        self, profile_id: str
+    ) -> base.HatchingProfileResponse | base.ErrorResponse:
+        """Get a sandbox analysis profile by either ID or name.
+
+        Parameters
+        ----------
+        profile_id : str
+            Either the `id` (UUID4) or the name of the profile.
+
+        Returns
+        -------
+        base.HatchingProfileResponse
+            If successful, the requested sandbox profile.
+        base.ErrorResponse
+            If there was an error.
+        """
+
+    async def get_profiles(
+        self,
+    ) -> list[base.HatchingProfileResponse] | base.ErrorResponse:
+        """Get all sandbox analysis profiles for your account.
+
+        Returns
+        -------
+        list[base.HatchingProfileResponse]
+            If successful, the requested sandbox profiles.
+        base.ErrorResponse
+            If there was an error.
         """
 
     async def get_rule(self, rule_name: str) -> base.YaraRule:
@@ -213,6 +253,32 @@ class PyHatchingClient:
         _docs: https://tria.ge/docs/cloud-api/search/
         """
 
+    async def submit_profile(
+        self,
+        name: str,
+        tags: list[str],
+        timeout: int,
+        network: enums.ProfileNetworkOptions,
+    ) -> None | base.ErrorResponse:
+        """Add a new sandbox analysis profile to your account.
+
+        Parameters
+        ----------
+        name : str
+            The name of the new profile, must not exist already.
+        tags : list[str]
+            The tags that match this profile to samples (TODO find the documented options).
+        timeout : int
+            The profiles timeout length in seconds.
+        network : enums.ProfileNetworkOptions
+            The network option for this analysis profile.
+
+        Returns
+        -------
+        None | base.ErrorResponse
+            None if successful, else `base.ErrorResponse`.
+        """
+
     async def submit_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
         """Submit a Yara rule to your account.
 
@@ -247,6 +313,43 @@ class PyHatchingClient:
         -------
         base.SamplesResponse
             If successful, the newly created sample object.
+        """
+
+    async def update_profile(
+        self,
+        tags: list[str],
+        timeout: int,
+        network: enums.ProfileNetworkOptions,
+        name: str | None = None,
+        profile_id: str | None = None,
+    ) -> None | base.ErrorResponse:
+        """Update the given profile.
+
+        One of `name` or `profile_id` must be set. Otherwise, ValueError is raised.
+        Both parameters cannot be used at the same time.
+
+        Parameters
+        ----------
+        tags : list[str]
+            The tags that match this profile to samples (TODO find documented options).
+        timeout : int
+            The profiles timeout length in seconds.
+        network : enums.ProfileNetworkOptions
+            The network option for this analysis profile.
+        name : str | None, optional
+            The name of the profile. Cannot be set if `profile_id` is. By default None.
+        profile_id : str | None, optional
+            The uuid4 of the profile. Cannot be set if `name` is. By default None.
+
+        Returns
+        -------
+        None | base.ErrorResponse
+            None if successful, otherwise a `base.ErrorResponse`.
+
+        Raises
+        ------
+        ValueError
+            If both `name` and `profile_id` are not set. Or if both parameters are set.
         """
 
     async def update_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
