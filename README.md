@@ -9,4 +9,3 @@ Supports:
 - Individual sample retrieval
 - Profile getting/setting
 - Yara rule getting/setting
-- 

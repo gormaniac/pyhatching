@@ -5,9 +5,12 @@ import json
 from typing import Any, Optional
 
 import aiohttp
-from pydantic import BaseModel                                      # pylint: disable=E0611
-from pydantic.error_wrappers import ErrorWrapper, ValidationError   # pylint: disable=E0611
-from pydantic.utils import ROOT_KEY                                 # pylint: disable=E0611
+from pydantic import BaseModel  # pylint: disable=E0611
+from pydantic.error_wrappers import (  # pylint: disable=E0611
+    ErrorWrapper,
+    ValidationError,
+)
+from pydantic.utils import ROOT_KEY  # pylint: disable=E0611
 
 from . import enums
 
@@ -23,6 +26,7 @@ class ErrorResponse(HatchingResponse):
 
     error: enums.ErrorNames
     message: str
+
 
 class SamplesResponse(HatchingResponse):
     """Response object for POST /samples."""
@@ -43,6 +47,7 @@ class YaraRule(BaseModel):
     name: str
     warnings: Optional[list[str]]
     rule: Optional[str]
+
 
 class YaraRules(HatchingResponse):
     """A list of yara rules."""
@@ -69,7 +74,10 @@ class HatchingProfileSubmission(BaseModel):
 
 
 class SubmissionRequest(HatchingRequest):
-    """Request object for POST /samples."""
+    """Request object for POST /samples.
+
+    TODO Document the params here as they aren't anywhere else.
+    """
 
     kind: enums.SubmissionKinds
     url: Optional[str]
@@ -141,15 +149,11 @@ class Indicator(BaseModel):
 
     ioc: Optional[str]
     description: Optional[str]
-    at: Optional[int]  # NOTE These had `uint32` go types, not sure if `int` works.
-    pid: Optional[int]  # NOTE These had `uint64` go types, not sure if `int` works.
-    procid: Optional[int]  # NOTE These had `int32` go types, not sure if `int` works.
-    pid_target: Optional[
-        int
-    ]  # NOTE These had `uint64` go types, not sure if `int` works.
-    procid_target: Optional[
-        int
-    ]  # NOTE These had `int32` go types, not sure if `int` works.
+    at: Optional[int]  # NOTE These had `uint32` go types, does `int` work?
+    pid: Optional[int]  # NOTE These had `uint64` go types, does `int` work?
+    procid: Optional[int]  # NOTE These had `int32` go types, does `int` work?
+    pid_target: Optional[int]  # NOTE These had `uint64` go types, does `int` work?
+    procid_target: Optional[int]  # NOTE These had `int32` go types, does `int` work?
     flow: Optional[int]
     stream: Optional[int]
     dump_file: Optional[str]
@@ -181,6 +185,7 @@ class OverviewIOCs(BaseModel):
 
 class Credentials(BaseModel):
     """Credentials captured during analysis."""
+
     pass_: str
     flow: Optional[int]
     protocol: Optional[str]
@@ -189,9 +194,8 @@ class Credentials(BaseModel):
     user: str
     email_to: Optional[str]
 
-
     @classmethod
-    def parse_obj(cls, obj: Any) -> 'Credentials':
+    def parse_obj(cls, obj: Any) -> "Credentials":
         """A custom parsing method to read in "pass" from a dict."""
 
         obj = cls._enforce_dict_if_root(obj)
@@ -199,7 +203,9 @@ class Credentials(BaseModel):
             try:
                 obj = dict(obj)
             except (TypeError, ValueError) as err:
-                exc = TypeError(f'{cls.__name__} expected dict not {obj.__class__.__name__}')
+                exc = TypeError(
+                    f"{cls.__name__} expected dict not {obj.__class__.__name__}"
+                )
                 raise ValidationError([ErrorWrapper(exc, loc=ROOT_KEY)], cls) from err
 
         if "pass" in obj:
@@ -227,6 +233,7 @@ class Credentials(BaseModel):
         """
 
         return json.dumps(self.dict(**kwargs))
+
 
 class Key(BaseModel):
     """A key observed during analysis."""
@@ -350,7 +357,7 @@ class OverviewSample(BaseModel):
     iocs: Optional[OverviewIOCs]
 
 
-class OverviewReport(BaseModel):
+class OverviewReport(HatchingResponse):
     """The sandbox's overview report for a single sample."""
 
     version: str
