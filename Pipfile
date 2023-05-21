@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 pydantic = "*"
 aiohttp = "*"
+pyhatching = {path = "."}
+python-dateutil = "*"
 
 [dev-packages]
 black = "*"

@@ -1,9 +1,84 @@
 """Types for pyhatching."""
 
+import datetime
+import json
 from typing import Any, Optional
 
+import aiohttp
+from pydantic import BaseModel                                      # pylint: disable=E0611
+from pydantic.error_wrappers import ErrorWrapper, ValidationError   # pylint: disable=E0611
+from pydantic.utils import ROOT_KEY                                 # pylint: disable=E0611
 
-from pydantic import BaseModel
+from . import enums
+
+
+class HatchingResponse(BaseModel):
+    """A response from the Hatching Triage API."""
+
+    resp_obj = aiohttp.ClientResponse
+
+
+class ErrorResponse(HatchingResponse):
+    """An error from the Hatching Triage API."""
+
+    error: enums.ErrorNames
+    message: str
+
+class SamplesResponse(HatchingResponse):
+    """Response object for POST /samples."""
+
+    id: str
+    status: enums.SubmissionStatuses
+    kind: enums.SampleKinds
+    filename: Optional[str]
+    url: Optional[str]
+    private: bool
+    submitted: datetime.datetime
+    completed: datetime.datetime
+
+
+class YaraRule(BaseModel):
+    """A yara rule."""
+
+    name: str
+    warnings: Optional[list[str]]
+    rule: Optional[str]
+
+class YaraRules(HatchingResponse):
+    """A list of yara rules."""
+
+    rules: list[YaraRule]
+
+
+class HatchingRequest(BaseModel):
+    """A request model sent to the Hatching Triage API."""
+
+
+class SubmissionRequestDefaults(BaseModel):
+    """Default sandbox paramaters for SubmissionRequest."""
+
+    timeout: Optional[int]
+    network: Optional[enums.SubmssionsRequestNetDefaults]
+
+
+class HatchingProfileSubmission(BaseModel):
+    """A sandbox submission profile object."""
+
+    profile: Optional[str]
+    pick: Optional[str]
+
+
+class SubmissionRequest(HatchingRequest):
+    """Request object for POST /samples."""
+
+    kind: enums.SubmissionKinds
+    url: Optional[str]
+    target: Optional[str]
+    interactive: Optional[bool]
+    password: Optional[str]
+    profiles: Optional[list[HatchingProfileSubmission]]
+    user_tags: Optional[list[str]]
+    defaults: SubmissionRequestDefaults
 
 
 class TaskSummary(BaseModel):
@@ -47,8 +122,8 @@ class TargetDesc(BaseModel):
 
     id: Optional[str]
     score: Optional[int]
-    submitted: Optional[str]
-    completed: Optional[str]
+    submitted: Optional[datetime.datetime]
+    completed: Optional[datetime.datetime]
     target: Optional[str]
     pick: Optional[str]
     type: Optional[str]
@@ -106,8 +181,7 @@ class OverviewIOCs(BaseModel):
 
 class Credentials(BaseModel):
     """Credentials captured during analysis."""
-
-    _pass: str
+    pass_: str
     flow: Optional[int]
     protocol: Optional[str]
     host: Optional[str]
@@ -115,16 +189,44 @@ class Credentials(BaseModel):
     user: str
     email_to: Optional[str]
 
-    def dict(self, **kwargs: dict) -> dict:
-        """Custom BaseModel.dict to get rid of the _ in _pass."""
 
-        ret: dict = self.__super__().dict(**kwargs)
+    @classmethod
+    def parse_obj(cls, obj: Any) -> 'Credentials':
+        """A custom parsing method to read in "pass" from a dict."""
 
-        if "_pass" in ret:
-            ret["pass"] = ret.pop("_pass")
+        obj = cls._enforce_dict_if_root(obj)
+        if not isinstance(obj, dict):
+            try:
+                obj = dict(obj)
+            except (TypeError, ValueError) as err:
+                exc = TypeError(f'{cls.__name__} expected dict not {obj.__class__.__name__}')
+                raise ValidationError([ErrorWrapper(exc, loc=ROOT_KEY)], cls) from err
+
+        if "pass" in obj:
+            obj["pass_"] = obj.pop("pass")
+
+        return cls(**obj)
+
+    def dict(self, **kwargs: dict) -> dict:  # pylint: disable=W0613
+        """Custom dict to get rid of the _ in pass_.
+
+        Doesn't support to BaseModel.dict.
+        """
+
+        ret: dict = vars(self)
+
+        if "pass_" in ret:
+            ret["pass"] = ret.pop("pass_")
 
         return ret
 
+    def json(self, **kwargs: dict) -> dict:
+        """Custom json that uses this object's custom dict method.
+
+        Doesn't support to BaseModel.dict.
+        """
+
+        return json.dumps(self.dict(**kwargs))
 
 class Key(BaseModel):
     """A key observed during analysis."""
@@ -196,8 +298,8 @@ class OverviewTarget(BaseModel):
     tasks: list[str]
     id: Optional[str]
     score: Optional[int]
-    submitted: Optional[str]
-    completed: Optional[str]
+    submitted: Optional[datetime.datetime]
+    completed: Optional[datetime.datetime]
     target: Optional[str]
     pick: Optional[str]
     type: Optional[str]
@@ -232,8 +334,6 @@ class OverviewSample(BaseModel):
 
     id: Optional[str]
     score: Optional[int]
-    submitted: Optional[str]
-    completed: Optional[str]
     target: Optional[str]
     pick: Optional[str]
     type: Optional[str]
@@ -244,8 +344,9 @@ class OverviewSample(BaseModel):
     sha512: Optional[str]
     filetype: Optional[str]
     static_tags: Optional[list[str]]
-    created: str
-    completed: str
+    submitted: Optional[datetime.datetime]
+    created: datetime.datetime
+    completed: datetime.datetime
     iocs: Optional[OverviewIOCs]
 
 
