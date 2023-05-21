@@ -95,6 +95,13 @@ class ProfileNetworkOptions(Enum):
     SIMNX: str = "simnx"
 
 
+class HashPrefixes(Enum):
+    MD5: str = "md5"
+    SHA1: str = "sha1"
+    SHA2: str = "sha256"
+    SHA5: str = "sha512"
+
+
 class AvailableTags(Enum):
     """All tags supported by Hatching Triage."""
 

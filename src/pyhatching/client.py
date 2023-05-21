@@ -5,28 +5,17 @@ from json import JSONDecodeError
 import pathlib
 
 import aiohttp
-
-# from pydantic.error_wrappers import ValidationError
+from pydantic.error_wrappers import ValidationError  # pylint: disable=E0611
 
 from . import base
 from . import enums
+from . import errors
+from . import utils
 from . import VERSION
 
 
 BASE_URL = "https://tria.ge/api/v0/"
 """The default URL for requests - the public/free version."""
-
-
-class PyHatchingError(Exception):
-    """An error in the pyhatching client."""
-
-
-class PyHatchingRequestError(PyHatchingError):
-    """An error making a pyhatching HTTP request."""
-
-
-class PyHatchingParseError(PyHatchingError):
-    """An error parsing a pyhatching HTTP response object."""
 
 
 class PyHatchingClient:
@@ -75,6 +64,7 @@ class PyHatchingClient:
         data: dict | None = None,
         json: dict | None = None,
         params: dict | None = None,
+        raw: bool = False
     ) -> tuple[aiohttp.ClientResponse, dict]:
         """Make an HTTP request to the Hatching Triage Sandbox API.
 
@@ -97,6 +87,9 @@ class PyHatchingClient:
             The JSON data to send in this request's HTTP body, by default None.
         params : dict | None, optional
             The URL parameters to send with this request, by default None.
+        raw : dict | False, optional
+            Return the raw response without calling `json` on the response.
+            Returns an empty dict as the 2nd return value.
 
         Returns
         -------
@@ -118,13 +111,19 @@ class PyHatchingClient:
             resp = await self.session.request(
                 method, uri, data=data, json=json, params=params
             )
+
+            if raw:
+                return resp, {}
+
             resp_json = await resp.json()
+
         except aiohttp.ClientError as err:
-            raise PyHatchingRequestError(
+            raise errors.PyHatchingRequestError(
                 f"Error making an HTTP request to Hatching Triage: {err}"
             ) from err
+
         except JSONDecodeError as err:
-            raise PyHatchingParseError(
+            raise errors.PyHatchingParseError(
                 f"Unable to parse the response json: {err}"
             ) from err
 
@@ -147,6 +146,22 @@ class PyHatchingClient:
         None
             If no bytes can be downloaded.
         """
+
+        if utils.is_hash(sample):
+            sample_id = await self.sample_id(sample)
+        else:
+            sample_id = sample
+
+        if sample_id is None:
+            raise errors.PyHatchingParseError(f"Unable to determine sample_id from: {sample}")
+
+        resp, _ = await self._request("get", f"/samples/{sample_id}/sample", raw=True)
+
+        if resp.status == 200:
+            sample_bytes = await resp.read()
+            return sample_bytes
+
+        return None
 
     async def get_profile(
         self, profile_id: str
@@ -234,10 +249,30 @@ class PyHatchingClient:
             The sample ID could not be found.
         """
 
-    async def search(self, query: str) -> list[base.SamplesResponse]:
+        hash_prefix = utils.hash_type(file_hash)
+
+        if hash_prefix is None:
+            raise errors.PyHatchingParseError(
+                f"The input hash is not valid according to `utils.hash_type`: {file_hash}"
+            )
+
+        samples = await self.search(f"{hash_prefix}:{file_hash}")
+
+        if isinstance(samples, base.ErrorResponse):
+            return None
+
+        if len(samples) > 1:
+            # TODO There should only be one sample per hash right?
+            return samples[0].id
+
+        return None
+
+    async def search(self, query: str) -> list[base.SamplesResponse] | base.ErrorResponse:
         """Search the Hatching Triage Sandbox for samples matching `query`.
 
         See the Hatching Triage docs_ for how to search.
+
+        Does not handle pagination yet, returns only the first 20 hits!
 
         Parameters
         ----------
@@ -252,6 +287,29 @@ class PyHatchingClient:
 
         _docs: https://tria.ge/docs/cloud-api/search/
         """
+
+        # TODO Handle pagination
+        params = {"query": query}
+
+        resp, resp_dict = await self._request("get", "/search", params=params)
+
+        try:
+            if "data" in resp_dict:
+                ret = []
+                for item in resp_dict["data"]:
+                    ret.append(base.SamplesResponse(resp_obj=resp, **item))
+            elif "error" in resp_dict:
+                ret = base.ErrorResponse(resp_obj=resp, **resp_dict)
+            else:
+                raise errors.PyHatchingParseError(
+                    f"Unexpected response from the /search endpoint: {resp_dict}"
+                )
+        except ValidationError as err:
+            raise errors.PyHatchingParseError(
+                f"Unable to validate /search response: {err}"
+            ) from err
+
+        return ret
 
     async def submit_profile(
         self,
