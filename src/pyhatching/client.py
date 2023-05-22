@@ -11,11 +11,7 @@ from . import base
 from . import enums
 from . import errors
 from . import utils
-from . import VERSION
-
-
-BASE_URL = "https://tria.ge/api/v0/"
-"""The default URL for requests - the public/free version."""
+from . import BASE_URL, VERSION
 
 
 class PyHatchingClient:

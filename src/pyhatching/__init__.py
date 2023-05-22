@@ -7,3 +7,7 @@ unless bytes makes more sense for the endpoint (samples, pcaps).
 """
 
 VERSION = "0.0.1"
+"""The version of pyhatching."""
+
+BASE_URL = "https://tria.ge/api/v0/"
+"""The default URL for requests - the public/free version."""
