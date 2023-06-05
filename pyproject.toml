@@ -5,16 +5,22 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pyhatching"
 version = "0.0.1"
+description = "An async Python client for the Hatching Triage Sandbox."
 readme = "README.md"
-requires-python = ">=3.10"
+license = "MIT"
+requires-python = ">=3.11"
 dependencies = [
     "aiohttp==3.8.4",
     "pydantic==1.10.7",
 ]
 
+[[project.authors]]
+name = "John Gorman"
+
+[project.urls]
+Homepage = "https://github.com/gormaniac/pyhatching"
+Documentation = "https://gormo.co/pyhatching/"
+
 [tool.setuptools.packages.find]
 namespaces = true
 where = ["src"]
-
-# [tool.setuptools.package-data]
-# "pyhatching.data" = ["*.txt", "*.json", "templates/*"]

@@ -2,3 +2,5 @@
 .vscode
 build/*
 *.egg-info
+docs/.buildinfo
+docs/.doctrees/

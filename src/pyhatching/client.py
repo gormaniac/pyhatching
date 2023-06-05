@@ -11,7 +11,7 @@ from . import base
 from . import enums
 from . import errors
 from . import utils
-from . import BASE_URL, VERSION
+from . import BASE_URL, __version__
 
 
 class PyHatchingClient:
@@ -46,7 +46,7 @@ class PyHatchingClient:
         self.api_key = api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "User-Agent": f"pyhatching v{VERSION}",
+            "User-Agent": f"pyhatching v{__version__}",
         }
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session = aiohttp.ClientSession(
