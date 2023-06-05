@@ -1,4 +1,4 @@
-NAME = {{NAME}}
+NAME = pyhatching
 PKG_DIR = src/$(NAME)
 
 .PHONY: help
@@ -42,9 +42,9 @@ clean: clean-py # Remove build files - including a forced "git rm" of "dist/*"
 read-docs: # Open the package docs locally
 	open docs/index.html
 
-.PHONY: version
-version: # Display the version of {{NAME}} installed in the pipenv
-	pipenv run python3 -m {{NAME}} --version
+# .PHONY: version
+# version: # Display the version of pyhatching installed in the pipenv
+# 	pipenv run python3 -m pyhatching --version
 
 .PHONY: release
 release: change-version clean setup build docs # Build a new versioned release and push it (requires VERSION=#.#.#)
