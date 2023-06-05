@@ -17,15 +17,15 @@ from . import BASE_URL, __version__
 class PyHatchingClient:
     """An async HTTP client that interfaces with the Hatching Triage Sandbox.
 
-    Any method that makes HTTP requests (calls `_request`) may raise either a
-    `PyHatchingRequestError` or `PyHatchingParseError`. If the specific method
+    Any method that makes HTTP requests (calls ``_request``) may raise either
+    a ``PyHatchingRequestError`` or ``PyHatchingParseError``. If the specific method
     also explicitly raises exceptions, it will be documented.
-    Catch all handled errors with `PyHatchingError`.
+    Catch all handled errors with ``PyHatchingError``.
 
     Parameters
     ----------
     api_key : str
-        The Hatching Triage Sandbox to use for requests.
+        The Hatching Triage Sandbox API key to use for requests.
     url : str, optional
         The URL to use as a base in all requests, by default BASE_URL.
     timeout : int, optional
@@ -34,12 +34,14 @@ class PyHatchingClient:
     Attributes
     ----------
     api_key : str
+        The Hatching Triage Sandbox API key to use for requests.
     headers : dict
         The headers used with every request, has API key and custom User Agent.
     session : aiohttp.ClientSession
         The underlying ClientSession used to make requests.
     timeout : aiohttp.ClientTimeout
-        The timeout object used by `session`.
+        The timeout object used by ``session``.
+
     """
 
     def __init__(self, api_key: str, url: str = BASE_URL, timeout: int = 60) -> None:
@@ -84,7 +86,7 @@ class PyHatchingClient:
         params : dict | None, optional
             The URL parameters to send with this request, by default None.
         raw : dict | False, optional
-            Return the raw response without calling `json` on the response.
+            Return the raw response without calling ``json`` on the response.
             Returns an empty dict as the 2nd return value.
 
         Returns
@@ -132,7 +134,8 @@ class PyHatchingClient:
         ----------
         sample : str
             The sample to download, this can be any of the following
-            as the value is passed to `sample_id` if needed to find the ID::
+            as the value is passed to ``sample_id`` if needed to find the ID::
+
                 sample_id, md5, sha1, sha2, ssdeep
 
         Returns
@@ -167,7 +170,7 @@ class PyHatchingClient:
         Parameters
         ----------
         profile_id : str
-            Either the `id` (UUID4) or the name of the profile.
+            Either the ``id`` (UUID4) or the name of the profile.
 
         Returns
         -------
@@ -220,7 +223,8 @@ class PyHatchingClient:
         ----------
         sample : str
             The sample to download, this can be any of the following
-            as the value is passed to `sample_id` if needed to find the ID::
+            as the value is passed to ``sample_id`` if needed to find the ID::
+    
                 sample_id, md5, sha1, sha2, ssdeep
 
         Returns
@@ -230,7 +234,7 @@ class PyHatchingClient:
         """
 
     async def sample_id(self, file_hash: str) -> str | None:
-        """Find the ID of a sample by the given hash, uses `search` under the hood.
+        """Find the ID of a sample by the given hash, uses ``search`` under the hood.
 
         Parameters
         ----------
@@ -240,7 +244,7 @@ class PyHatchingClient:
         Returns
         -------
         str
-            The sample ID that was found for `file_hash`.
+            The sample ID that was found for ``file_hash``.
         None
             The sample ID could not be found.
         """
@@ -249,7 +253,7 @@ class PyHatchingClient:
 
         if hash_prefix is None:
             raise errors.PyHatchingParseError(
-                f"The input hash is not valid according to `utils.hash_type`: {file_hash}"
+                f"The input hash is not valid according to 'utils.hash_type': {file_hash}"
             )
 
         samples = await self.search(f"{hash_prefix}:{file_hash}")
@@ -264,9 +268,9 @@ class PyHatchingClient:
         return None
 
     async def search(self, query: str) -> list[base.SamplesResponse] | base.ErrorResponse:
-        """Search the Hatching Triage Sandbox for samples matching `query`.
+        """Search the Hatching Triage Sandbox for samples matching ``query``.
 
-        See the Hatching Triage docs_ for how to search.
+        See the Hatching Triage `docs`_ for how to search.
 
         Does not handle pagination yet, returns only the first 20 hits!
 
@@ -278,10 +282,10 @@ class PyHatchingClient:
         Returns
         -------
         list[base.SamplesResponse]
-            A list containing `SamplesResponse` objects for each successfully
+            A list containing ``SamplesResponse`` objects for each successfully
             returned sample.
 
-        _docs: https://tria.ge/docs/cloud-api/search/
+        .. _docs: https://tria.ge/docs/cloud-api/search/
         """
 
         # TODO Handle pagination
@@ -330,7 +334,7 @@ class PyHatchingClient:
         Returns
         -------
         None | base.ErrorResponse
-            None if successful, else `base.ErrorResponse`.
+            None if successful, else ``base.ErrorResponse``.
         """
 
     async def submit_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
@@ -354,7 +358,7 @@ class PyHatchingClient:
         submit_req: base.SubmissionRequest,
         sample: bytes | pathlib.Path | str,
     ) -> base.SamplesResponse:
-        """Submit a sample to the sandbox based on the given `SubmissionRequest`.
+        """Submit a sample to the sandbox based on the given ``SubmissionRequest``.
 
         Parameters
         ----------
@@ -379,7 +383,7 @@ class PyHatchingClient:
     ) -> None | base.ErrorResponse:
         """Update the given profile.
 
-        One of `name` or `profile_id` must be set. Otherwise, ValueError is raised.
+        One of ``name`` or ``profile_id`` must be set. Otherwise, ValueError is raised.
         Both parameters cannot be used at the same time.
 
         Parameters
@@ -391,19 +395,19 @@ class PyHatchingClient:
         network : enums.ProfileNetworkOptions
             The network option for this analysis profile.
         name : str | None, optional
-            The name of the profile. Cannot be set if `profile_id` is. By default None.
+            The name of the profile. Cannot be set if ``profile_id`` is. By default None.
         profile_id : str | None, optional
-            The uuid4 of the profile. Cannot be set if `name` is. By default None.
+            The uuid4 of the profile. Cannot be set if ``name`` is. By default None.
 
         Returns
         -------
         None | base.ErrorResponse
-            None if successful, otherwise a `base.ErrorResponse`.
+            None if successful, otherwise a ``base.ErrorResponse``.
 
         Raises
         ------
         ValueError
-            If both `name` and `profile_id` are not set. Or if both parameters are set.
+            If both ``name`` and ``profile_id`` are not set. Or if both parameters are set.
         """
 
     async def update_rule(self, name: str, contents: str) -> base.ErrorResponse | None:

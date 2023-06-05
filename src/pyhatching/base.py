@@ -232,9 +232,9 @@ class Credentials(BaseModel):
         return cls(**obj)
 
     def dict(self, **kwargs: dict) -> dict:
-        """Custom dict to get rid of the _ in pass_.
+        """Custom dict to get rid of the ``_`` in ``pass_``.
 
-        Attempts to replicate `BaseModel.dict` by copying the `self._iter` call.
+        Attempts to replicate ``BaseModel.dict`` by copying the ``self._iter`` call.
         """
 
         ret = dict(
@@ -255,10 +255,7 @@ class Credentials(BaseModel):
         return ret
 
     def json(self, **kwargs: dict) -> dict:
-        """Custom json that uses this object's custom dict method.
-
-        Doesn't support to BaseModel.dict.
-        """
+        """Custom json that uses this object's custom ``dict`` method."""
 
         return json.dumps(self.dict(**kwargs))
 
