@@ -1,6 +1,7 @@
 """The pyhatching HTTP client implementation."""
 
 # import asyncio
+import functools
 from json import JSONDecodeError
 import pathlib
 
@@ -14,12 +15,81 @@ from . import utils
 from . import BASE_URL, __version__
 
 
+def convert_to_model(
+    model: base.HatchingResponse,
+    resp: aiohttp.ClientResponse,
+    obj: dict,
+    raise_on_api_err: bool = False,
+) -> base.HatchingResponse | list[base.HatchingResponse]:
+    """Convert an API response to the given model.
+
+    Parameters
+    ----------
+    model : base.HatchingResponse
+        The model to convert the response to.
+    resp : aiohttp.ClientResponse
+        The HTTP response object so it can be added to the model.
+    obj : dict
+        The already deserialized JSON data from the given response.
+    raise_on_api_err : bool, optional
+        Whether to raise if ``obj`` is actually an API error (``base.ErrorResponse``).
+        By default False.
+
+    Returns
+    -------
+    base.HatchingResponse | list[base.HatchingResponse]
+        The API can return either a list or a single item depending on the endpoint
+        so can this method. The objects returned are of the same type as ``model``.
+
+    Raises
+    ------
+    errors.PyHatchingParseError
+        If ``obj`` could not be validated when passed to ``model``. Or when
+        ``obj`` is not a dict.
+    errors.PyHatchingResponseError
+        If ``raise_on_api_err`` is ``True`` and ``obj`` represents an error
+        returned by the Hatching Triage API and not a successful response.
+    """
+
+    ret = []
+    url = resp.request_info.url
+    try:
+        if "data" in obj:
+            for item in obj["data"]:
+                ret.append(model(resp_obj=obj, **item))
+        elif "error" in obj:
+            ret = base.ErrorResponse(resp_obj=resp, **obj)
+        elif isinstance(obj, dict):
+            ret = model(resp_obj=resp, **obj)
+        else:
+            raise errors.PyHatchingParseError(
+                f"Unexpected response from the {url} endpoint: {obj}"
+            )
+    except ValidationError as err:
+        raise errors.PyHatchingParseError(
+            f"Unable to validate {url} response: {err}"
+        ) from err
+
+    if raise_on_api_err and isinstance(ret, base.ErrorResponse):
+        raise errors.PyHatchingResponseError(
+            f"Hatching Triage API Error - {ret.error} - {ret.message}"
+        )
+
+    return ret
+
+
 class PyHatchingClient:
     """An async HTTP client that interfaces with the Hatching Triage Sandbox.
 
     Any method that makes HTTP requests (calls ``_request``) may raise either
-    a ``PyHatchingRequestError`` or ``PyHatchingParseError``. If the specific method
-    also explicitly raises exceptions, it will be documented.
+    a ``PyHatchingRequestError`` or ``PyHatchingParseError``.
+
+    Additionally, any method that returns a Pydantic model (``base.HatchingResponse``)
+    may raise a ``PyHatchingParseError``. If ``raise_on_api_err`` is ``True``, these
+    methods may raise a ``PyHatchingResponseError`` as well.
+    
+    If a specific method also explicitly raises exceptions, it will be documented.
+
     Catch all handled errors with ``PyHatchingError``.
 
     Parameters
@@ -30,6 +100,10 @@ class PyHatchingClient:
         The URL to use as a base in all requests, by default BASE_URL.
     timeout : int, optional
         The total timeout for all requests, by default 60.
+    raise_on_api_err : bool, optional
+        Whether to raise when the Hatching Triage API returns an API error response
+        (an HTTP 200 response that describes a handled error with the request).
+        See the `docs`_ for further information.
 
     Attributes
     ----------
@@ -41,18 +115,32 @@ class PyHatchingClient:
         The underlying ClientSession used to make requests.
     timeout : aiohttp.ClientTimeout
         The timeout object used by ``session``.
+    convert_resp : typing.Callable
+        A ``functools.partial`` for ``convert_to_model`` with ```raise_on_api_err``
+        saved so that it doesn't have to be passed to each method call.
 
+    .. _docs: https://tria.ge/docs/cloud-api/conventions/
     """
 
-    def __init__(self, api_key: str, url: str = BASE_URL, timeout: int = 60) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        url: str = BASE_URL,
+        timeout: int = 60,
+        raise_on_api_err: bool = False,
+    ) -> None:
         self.api_key = api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "User-Agent": f"pyhatching v{__version__}",
+            "User-Agent": f"{aiohttp.http.SERVER_SOFTWARE} pyhatching/{__version__}",
         }
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session = aiohttp.ClientSession(
             base_url=url, headers=self.headers, timeout=self.timeout
+        )
+
+        self.convert_resp = functools.partial(
+            convert_to_model, raise_on_api_err=raise_on_api_err
         )
 
     async def _request(
@@ -62,7 +150,7 @@ class PyHatchingClient:
         data: dict | None = None,
         json: dict | None = None,
         params: dict | None = None,
-        raw: bool = False
+        raw: bool = False,
     ) -> tuple[aiohttp.ClientResponse, dict]:
         """Make an HTTP request to the Hatching Triage Sandbox API.
 
@@ -152,7 +240,9 @@ class PyHatchingClient:
             sample_id = sample
 
         if sample_id is None:
-            raise errors.PyHatchingParseError(f"Unable to determine sample_id from: {sample}")
+            raise errors.PyHatchingParseError(
+                f"Unable to determine sample_id from: {sample}"
+            )
 
         resp, _ = await self._request("get", f"/samples/{sample_id}/sample", raw=True)
 
@@ -179,6 +269,10 @@ class PyHatchingClient:
         base.ErrorResponse
             If there was an error.
         """
+
+        resp, resp_dict = await self._request("get", f"/profiles/{profile_id}")
+
+        return self.convert_resp(base.HatchingProfileResponse, resp, resp_dict)
 
     async def get_profiles(
         self,
@@ -224,7 +318,7 @@ class PyHatchingClient:
         sample : str
             The sample to download, this can be any of the following
             as the value is passed to ``sample_id`` if needed to find the ID::
-    
+
                 sample_id, md5, sha1, sha2, ssdeep
 
         Returns
@@ -267,7 +361,9 @@ class PyHatchingClient:
 
         return None
 
-    async def search(self, query: str) -> list[base.SamplesResponse] | base.ErrorResponse:
+    async def search(
+        self, query: str
+    ) -> list[base.SamplesResponse] | base.ErrorResponse:
         """Search the Hatching Triage Sandbox for samples matching ``query``.
 
         See the Hatching Triage `docs`_ for how to search.
@@ -293,23 +389,7 @@ class PyHatchingClient:
 
         resp, resp_dict = await self._request("get", "/search", params=params)
 
-        try:
-            if "data" in resp_dict:
-                ret = []
-                for item in resp_dict["data"]:
-                    ret.append(base.SamplesResponse(resp_obj=resp, **item))
-            elif "error" in resp_dict:
-                ret = base.ErrorResponse(resp_obj=resp, **resp_dict)
-            else:
-                raise errors.PyHatchingParseError(
-                    f"Unexpected response from the /search endpoint: {resp_dict}"
-                )
-        except ValidationError as err:
-            raise errors.PyHatchingParseError(
-                f"Unable to validate /search response: {err}"
-            ) from err
-
-        return ret
+        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
 
     async def submit_profile(
         self,
@@ -325,7 +405,8 @@ class PyHatchingClient:
         name : str
             The name of the new profile, must not exist already.
         tags : list[str]
-            The tags that match this profile to samples (TODO find the documented options).
+            The tags that match this profile to samples.
+            TODO find the documented options
         timeout : int
             The profiles timeout length in seconds.
         network : enums.ProfileNetworkOptions
@@ -407,7 +488,8 @@ class PyHatchingClient:
         Raises
         ------
         ValueError
-            If both ``name`` and ``profile_id`` are not set. Or if both parameters are set.
+            If both ``name`` and ``profile_id`` are not set.
+            Or if both parameters are set.
         """
 
     async def update_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
