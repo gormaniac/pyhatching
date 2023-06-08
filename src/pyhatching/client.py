@@ -287,6 +287,10 @@ class PyHatchingClient:
             If there was an error.
         """
 
+        resp, resp_dict = await self._request("get", "/profiles")
+
+        return self.convert_resp(base.HatchingProfileResponse, resp, resp_dict)
+
     async def get_rule(self, rule_name: str) -> base.YaraRule:
         """Get a single Yara rule by name.
 
