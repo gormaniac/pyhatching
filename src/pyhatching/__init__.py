@@ -6,7 +6,7 @@ All client calls return objects (see `pyhatching.base`) instead of dicts,
 unless bytes makes more sense for the endpoint (samples, pcaps).
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 """The version of pyhatching."""
 
 BASE_URL = "https://tria.ge/api/v0/"

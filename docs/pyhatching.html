@@ -338,6 +338,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#pyhatching.client.PyHatchingClient.update_rule"><code class="docutils literal notranslate"><span class="pre">PyHatchingClient.update_rule()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#pyhatching.client.convert_to_model"><code class="docutils literal notranslate"><span class="pre">convert_to_model()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-pyhatching.enums">pyhatching.enums module</a><ul>
@@ -551,6 +552,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#pyhatching.errors.PyHatchingError"><code class="docutils literal notranslate"><span class="pre">PyHatchingError</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pyhatching.errors.PyHatchingParseError"><code class="docutils literal notranslate"><span class="pre">PyHatchingParseError</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pyhatching.errors.PyHatchingRequestError"><code class="docutils literal notranslate"><span class="pre">PyHatchingRequestError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pyhatching.errors.PyHatchingResponseError"><code class="docutils literal notranslate"><span class="pre">PyHatchingResponseError</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-pyhatching.utils">pyhatching.utils module</a><ul>
@@ -1762,13 +1764,16 @@
 <p>The pyhatching HTTP client implementation.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="pyhatching.client.PyHatchingClient">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pyhatching.client.</span></span><span class="sig-name descname"><span class="pre">PyHatchingClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'https://tria.ge/api/v0/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyhatching.client.PyHatchingClient" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pyhatching.client.</span></span><span class="sig-name descname"><span class="pre">PyHatchingClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'https://tria.ge/api/v0/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_on_api_err</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyhatching.client.PyHatchingClient" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>An async HTTP client that interfaces with the Hatching Triage Sandbox.</p>
 <p>Any method that makes HTTP requests (calls <code class="docutils literal notranslate"><span class="pre">_request</span></code>) may raise either
-a <code class="docutils literal notranslate"><span class="pre">PyHatchingRequestError</span></code> or <code class="docutils literal notranslate"><span class="pre">PyHatchingParseError</span></code>. If the specific method
-also explicitly raises exceptions, it will be documented.
-Catch all handled errors with <code class="docutils literal notranslate"><span class="pre">PyHatchingError</span></code>.</p>
+a <code class="docutils literal notranslate"><span class="pre">PyHatchingRequestError</span></code> or <code class="docutils literal notranslate"><span class="pre">PyHatchingParseError</span></code>.</p>
+<p>Additionally, any method that returns a Pydantic model (<code class="docutils literal notranslate"><span class="pre">base.HatchingResponse</span></code>)
+may raise a <code class="docutils literal notranslate"><span class="pre">PyHatchingParseError</span></code>. If <code class="docutils literal notranslate"><span class="pre">raise_on_api_err</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, these
+methods may raise a <code class="docutils literal notranslate"><span class="pre">PyHatchingResponseError</span></code> as well.</p>
+<p>If a specific method also explicitly raises exceptions, it will be documented.</p>
+<p>Catch all handled errors with <code class="docutils literal notranslate"><span class="pre">PyHatchingError</span></code>.</p>
 <section id="parameters">
 <h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading"></a></h3>
 <dl class="simple">
@@ -1777,6 +1782,10 @@ Catch all handled errors with <code class="docutils literal notranslate"><span c
 <dt>url<span class="classifier">str, optional</span></dt><dd><p>The URL to use as a base in all requests, by default BASE_URL.</p>
 </dd>
 <dt>timeout<span class="classifier">int, optional</span></dt><dd><p>The total timeout for all requests, by default 60.</p>
+</dd>
+<dt>raise_on_api_err<span class="classifier">bool, optional</span></dt><dd><p>Whether to raise when the Hatching Triage API returns an API error response
+(an HTTP 200 response that describes a handled error with the request).
+See the <a href="#id31"><span class="problematic" id="id32">`docs`_</span></a> for further information.</p>
 </dd>
 </dl>
 </section>
@@ -1790,6 +1799,9 @@ Catch all handled errors with <code class="docutils literal notranslate"><span c
 <dt>session<span class="classifier">aiohttp.ClientSession</span></dt><dd><p>The underlying ClientSession used to make requests.</p>
 </dd>
 <dt>timeout<span class="classifier">aiohttp.ClientTimeout</span></dt><dd><p>The timeout object used by <code class="docutils literal notranslate"><span class="pre">session</span></code>.</p>
+</dd>
+<dt>convert_resp<span class="classifier">typing.Callable</span></dt><dd><p>A <code class="docutils literal notranslate"><span class="pre">functools.partial</span></code> for <code class="docutils literal notranslate"><span class="pre">convert_to_model</span></code> with <code class="docutils literal notranslate"><span class="pre">`raise_on_api_err</span></code>
+saved so that it doesn’t have to be passed to each method call.</p>
 </dd>
 </dl>
 <dl class="py method">
@@ -1938,7 +1950,7 @@ as the value is passed to <code class="docutils literal notranslate"><span class
 <dt class="sig sig-object py" id="pyhatching.client.PyHatchingClient.search">
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pyhatching.base.SamplesResponse" title="pyhatching.base.SamplesResponse"><span class="pre">pyhatching.base.SamplesResponse</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#pyhatching.base.ErrorResponse" title="pyhatching.base.ErrorResponse"><span class="pre">ErrorResponse</span></a></span></span><a class="headerlink" href="#pyhatching.client.PyHatchingClient.search" title="Permalink to this definition"></a></dt>
 <dd><p>Search the Hatching Triage Sandbox for samples matching <code class="docutils literal notranslate"><span class="pre">query</span></code>.</p>
-<p>See the Hatching Triage <a class="reference external" href="https://tria.ge/docs/cloud-api/search/">docs</a> for how to search.</p>
+<p>See the Hatching Triage <a href="#id33"><span class="problematic" id="id34">`docs`_</span></a> for how to search.</p>
 <p>Does not handle pagination yet, returns only the first 20 hits!</p>
 <section id="id12">
 <h4>Parameters<a class="headerlink" href="#id12" title="Permalink to this heading"></a></h4>
@@ -1961,12 +1973,13 @@ returned sample.</p>
 <dt class="sig sig-object py" id="pyhatching.client.PyHatchingClient.submit_profile">
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">submit_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pyhatching.enums.ProfileNetworkOptions" title="pyhatching.enums.ProfileNetworkOptions"><span class="pre">ProfileNetworkOptions</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#pyhatching.base.ErrorResponse" title="pyhatching.base.ErrorResponse"><span class="pre">ErrorResponse</span></a></span></span><a class="headerlink" href="#pyhatching.client.PyHatchingClient.submit_profile" title="Permalink to this definition"></a></dt>
 <dd><p>Add a new sandbox analysis profile to your account.</p>
-<section id="id14">
-<h4>Parameters<a class="headerlink" href="#id14" title="Permalink to this heading"></a></h4>
+<section id="id15">
+<h4>Parameters<a class="headerlink" href="#id15" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>name<span class="classifier">str</span></dt><dd><p>The name of the new profile, must not exist already.</p>
 </dd>
-<dt>tags<span class="classifier">list[str]</span></dt><dd><p>The tags that match this profile to samples (TODO find the documented options).</p>
+<dt>tags<span class="classifier">list[str]</span></dt><dd><p>The tags that match this profile to samples.
+TODO find the documented options</p>
 </dd>
 <dt>timeout<span class="classifier">int</span></dt><dd><p>The profiles timeout length in seconds.</p>
 </dd>
@@ -1974,8 +1987,8 @@ returned sample.</p>
 </dd>
 </dl>
 </section>
-<section id="id15">
-<h4>Returns<a class="headerlink" href="#id15" title="Permalink to this heading"></a></h4>
+<section id="id16">
+<h4>Returns<a class="headerlink" href="#id16" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>None | base.ErrorResponse</dt><dd><p>None if successful, else <code class="docutils literal notranslate"><span class="pre">base.ErrorResponse</span></code>.</p>
 </dd>
@@ -1987,8 +2000,8 @@ returned sample.</p>
 <dt class="sig sig-object py" id="pyhatching.client.PyHatchingClient.submit_rule">
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">submit_rule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contents</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pyhatching.base.ErrorResponse" title="pyhatching.base.ErrorResponse"><span class="pre">ErrorResponse</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#pyhatching.client.PyHatchingClient.submit_rule" title="Permalink to this definition"></a></dt>
 <dd><p>Submit a Yara rule to your account.</p>
-<section id="id16">
-<h4>Parameters<a class="headerlink" href="#id16" title="Permalink to this heading"></a></h4>
+<section id="id17">
+<h4>Parameters<a class="headerlink" href="#id17" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>name<span class="classifier">str</span></dt><dd><p>The name of the rule - must not exist already.</p>
 </dd>
@@ -1996,8 +2009,8 @@ returned sample.</p>
 </dd>
 </dl>
 </section>
-<section id="id17">
-<h4>Returns<a class="headerlink" href="#id17" title="Permalink to this heading"></a></h4>
+<section id="id18">
+<h4>Returns<a class="headerlink" href="#id18" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>base.ErrorResponse | None</dt><dd><p>None if successful, otherwise the returned ErrorResponse.</p>
 </dd>
@@ -2009,8 +2022,8 @@ returned sample.</p>
 <dt class="sig sig-object py" id="pyhatching.client.PyHatchingClient.submit_sample">
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">submit_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">submit_req</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pyhatching.base.SubmissionRequest" title="pyhatching.base.SubmissionRequest"><span class="pre">SubmissionRequest</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pyhatching.base.SamplesResponse" title="pyhatching.base.SamplesResponse"><span class="pre">SamplesResponse</span></a></span></span><a class="headerlink" href="#pyhatching.client.PyHatchingClient.submit_sample" title="Permalink to this definition"></a></dt>
 <dd><p>Submit a sample to the sandbox based on the given <code class="docutils literal notranslate"><span class="pre">SubmissionRequest</span></code>.</p>
-<section id="id18">
-<h4>Parameters<a class="headerlink" href="#id18" title="Permalink to this heading"></a></h4>
+<section id="id19">
+<h4>Parameters<a class="headerlink" href="#id19" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>submit_req<span class="classifier">base.SubmissionRequest</span></dt><dd><p>The object used to make the request - see this object for details.</p>
 </dd>
@@ -2018,8 +2031,8 @@ returned sample.</p>
 </dd>
 </dl>
 </section>
-<section id="id19">
-<h4>Returns<a class="headerlink" href="#id19" title="Permalink to this heading"></a></h4>
+<section id="id20">
+<h4>Returns<a class="headerlink" href="#id20" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>base.SamplesResponse</dt><dd><p>If successful, the newly created sample object.</p>
 </dd>
@@ -2033,8 +2046,8 @@ returned sample.</p>
 <dd><p>Update the given profile.</p>
 <p>One of <code class="docutils literal notranslate"><span class="pre">name</span></code> or <code class="docutils literal notranslate"><span class="pre">profile_id</span></code> must be set. Otherwise, ValueError is raised.
 Both parameters cannot be used at the same time.</p>
-<section id="id20">
-<h4>Parameters<a class="headerlink" href="#id20" title="Permalink to this heading"></a></h4>
+<section id="id21">
+<h4>Parameters<a class="headerlink" href="#id21" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>tags<span class="classifier">list[str]</span></dt><dd><p>The tags that match this profile to samples (TODO find documented options).</p>
 </dd>
@@ -2048,8 +2061,8 @@ Both parameters cannot be used at the same time.</p>
 </dd>
 </dl>
 </section>
-<section id="id21">
-<h4>Returns<a class="headerlink" href="#id21" title="Permalink to this heading"></a></h4>
+<section id="id22">
+<h4>Returns<a class="headerlink" href="#id22" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>None | base.ErrorResponse</dt><dd><p>None if successful, otherwise a <code class="docutils literal notranslate"><span class="pre">base.ErrorResponse</span></code>.</p>
 </dd>
@@ -2058,7 +2071,8 @@ Both parameters cannot be used at the same time.</p>
 <section id="raises">
 <h4>Raises<a class="headerlink" href="#raises" title="Permalink to this heading"></a></h4>
 <dl class="simple">
-<dt>ValueError</dt><dd><p>If both <code class="docutils literal notranslate"><span class="pre">name</span></code> and <code class="docutils literal notranslate"><span class="pre">profile_id</span></code> are not set. Or if both parameters are set.</p>
+<dt>ValueError</dt><dd><p>If both <code class="docutils literal notranslate"><span class="pre">name</span></code> and <code class="docutils literal notranslate"><span class="pre">profile_id</span></code> are not set.
+Or if both parameters are set.</p>
 </dd>
 </dl>
 </section>
@@ -2068,8 +2082,8 @@ Both parameters cannot be used at the same time.</p>
 <dt class="sig sig-object py" id="pyhatching.client.PyHatchingClient.update_rule">
 <em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">update_rule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contents</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pyhatching.base.ErrorResponse" title="pyhatching.base.ErrorResponse"><span class="pre">ErrorResponse</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#pyhatching.client.PyHatchingClient.update_rule" title="Permalink to this definition"></a></dt>
 <dd><p>Update an existing Yara rule.</p>
-<section id="id22">
-<h4>Parameters<a class="headerlink" href="#id22" title="Permalink to this heading"></a></h4>
+<section id="id23">
+<h4>Parameters<a class="headerlink" href="#id23" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>name<span class="classifier">str</span></dt><dd><p>The name of the rule - must exist already.</p>
 </dd>
@@ -2077,8 +2091,8 @@ Both parameters cannot be used at the same time.</p>
 </dd>
 </dl>
 </section>
-<section id="id23">
-<h4>Returns<a class="headerlink" href="#id23" title="Permalink to this heading"></a></h4>
+<section id="id24">
+<h4>Returns<a class="headerlink" href="#id24" title="Permalink to this heading"></a></h4>
 <dl class="simple">
 <dt>base.ErrorResponse | None</dt><dd><p>None if successful, otherwise the returned ErrorResponse.</p>
 </dd>
@@ -2086,6 +2100,45 @@ Both parameters cannot be used at the same time.</p>
 </section>
 </dd></dl>
 
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyhatching.client.convert_to_model">
+<span class="sig-prename descclassname"><span class="pre">pyhatching.client.</span></span><span class="sig-name descname"><span class="pre">convert_to_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pyhatching.base.HatchingResponse" title="pyhatching.base.HatchingResponse"><span class="pre">HatchingResponse</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">resp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ClientResponse</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_on_api_err</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pyhatching.base.HatchingResponse" title="pyhatching.base.HatchingResponse"><span class="pre">HatchingResponse</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pyhatching.base.HatchingResponse" title="pyhatching.base.HatchingResponse"><span class="pre">pyhatching.base.HatchingResponse</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#pyhatching.client.convert_to_model" title="Permalink to this definition"></a></dt>
+<dd><p>Convert an API response to the given model.</p>
+<section id="id25">
+<h3>Parameters<a class="headerlink" href="#id25" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>model<span class="classifier">base.HatchingResponse</span></dt><dd><p>The model to convert the response to.</p>
+</dd>
+<dt>resp<span class="classifier">aiohttp.ClientResponse</span></dt><dd><p>The HTTP response object so it can be added to the model.</p>
+</dd>
+<dt>obj<span class="classifier">dict</span></dt><dd><p>The already deserialized JSON data from the given response.</p>
+</dd>
+<dt>raise_on_api_err<span class="classifier">bool, optional</span></dt><dd><p>Whether to raise if <code class="docutils literal notranslate"><span class="pre">obj</span></code> is actually an API error (<code class="docutils literal notranslate"><span class="pre">base.ErrorResponse</span></code>).
+By default False.</p>
+</dd>
+</dl>
+</section>
+<section id="id26">
+<h3>Returns<a class="headerlink" href="#id26" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>base.HatchingResponse | list[base.HatchingResponse]</dt><dd><p>The API can return either a list or a single item depending on the endpoint
+so can this method. The objects returned are of the same type as <code class="docutils literal notranslate"><span class="pre">model</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="id27">
+<h3>Raises<a class="headerlink" href="#id27" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>errors.PyHatchingParseError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">obj</span></code> could not be validated when passed to <code class="docutils literal notranslate"><span class="pre">model</span></code>. Or when
+<code class="docutils literal notranslate"><span class="pre">obj</span></code> is not a dict.</p>
+</dd>
+<dt>errors.PyHatchingResponseError</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">raise_on_api_err</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code> and <code class="docutils literal notranslate"><span class="pre">obj</span></code> represents an error
+returned by the Hatching Triage API and not a successful response.</p>
+</dd>
+</dl>
 </section>
 </dd></dl>
 
@@ -2587,8 +2640,8 @@ Both parameters cannot be used at the same time.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pyhatching.enums.</span></span><span class="sig-name descname"><span class="pre">ProfileNetworkOptions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyhatching.enums.ProfileNetworkOptions" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
 <p>Available network options for sandbox analysis.</p>
-<section id="id24">
-<h3>Parameters<a class="headerlink" href="#id24" title="Permalink to this heading"></a></h3>
+<section id="id28">
+<h3>Parameters<a class="headerlink" href="#id28" title="Permalink to this heading"></a></h3>
 <p>“”: The system default
 “drop”: Disable networking.
 “internet”: Allow connections to the internet.
@@ -3043,6 +3096,13 @@ Both parameters cannot be used at the same time.</p>
 <p>An error making a pyhatching HTTP request.</p>
 </dd></dl>
 
+<dl class="py exception">
+<dt class="sig sig-object py" id="pyhatching.errors.PyHatchingResponseError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pyhatching.errors.</span></span><span class="sig-name descname"><span class="pre">PyHatchingResponseError</span></span><a class="headerlink" href="#pyhatching.errors.PyHatchingResponseError" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pyhatching.errors.PyHatchingError" title="pyhatching.errors.PyHatchingError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PyHatchingError</span></code></a></p>
+<p>The Hatching Triage API returned an error.</p>
+</dd></dl>
+
 </section>
 <section id="module-pyhatching.utils">
 <span id="pyhatching-utils-module"></span><h2>pyhatching.utils module<a class="headerlink" href="#module-pyhatching.utils" title="Permalink to this heading"></a></h2>
@@ -3052,15 +3112,15 @@ Both parameters cannot be used at the same time.</p>
 <span class="sig-prename descclassname"><span class="pre">pyhatching.utils.</span></span><span class="sig-name descname"><span class="pre">hash_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pyhatching.enums.HashPrefixes" title="pyhatching.enums.HashPrefixes"><span class="pre">HashPrefixes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#pyhatching.utils.hash_type" title="Permalink to this definition"></a></dt>
 <dd><p>Determine the type of a given hash.</p>
 <p>Supports: md5, sha1, sha256, sha512</p>
-<section id="id25">
-<h3>Parameters<a class="headerlink" href="#id25" title="Permalink to this heading"></a></h3>
+<section id="id29">
+<h3>Parameters<a class="headerlink" href="#id29" title="Permalink to this heading"></a></h3>
 <dl class="simple">
 <dt>input_hash<span class="classifier">str</span></dt><dd><p>A hash of one of the following types: md5, sha1, sha256, sha512</p>
 </dd>
 </dl>
 </section>
-<section id="id26">
-<h3>Returns<a class="headerlink" href="#id26" title="Permalink to this heading"></a></h3>
+<section id="id30">
+<h3>Returns<a class="headerlink" href="#id30" title="Permalink to this heading"></a></h3>
 <dl class="simple">
 <dt>enums.HashPrefixes | None</dt><dd><p>Either the name of the hash type or None if the input is not a hash.</p>
 </dd>
