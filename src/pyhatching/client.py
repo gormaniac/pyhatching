@@ -43,10 +43,10 @@ def convert_to_model(
 
     Raises
     ------
-    errors.PyHatchingParseError
+    errors.PyHatchingValidateError
         If ``obj`` could not be validated when passed to ``model``. Or when
         ``obj`` is not a dict.
-    errors.PyHatchingResponseError
+    errors.PyHatchingApiError
         If ``raise_on_api_err`` is ``True`` and ``obj`` represents an error
         returned by the Hatching Triage API and not a successful response.
     """
@@ -62,16 +62,16 @@ def convert_to_model(
         elif isinstance(obj, dict):
             ret = model(resp_obj=resp, **obj)
         else:
-            raise errors.PyHatchingParseError(
+            raise errors.PyHatchingValidateError(
                 f"Unexpected response from the {url} endpoint: {obj}"
             )
     except ValidationError as err:
-        raise errors.PyHatchingParseError(
+        raise errors.PyHatchingValidateError(
             f"Unable to validate {url} response: {err}"
         ) from err
 
     if raise_on_api_err and isinstance(ret, base.ErrorResponse):
-        raise errors.PyHatchingResponseError(
+        raise errors.PyHatchingApiError(
             f"Hatching Triage API Error - {ret.error} - {ret.message}"
         )
 
@@ -82,11 +82,11 @@ class PyHatchingClient:
     """An async HTTP client that interfaces with the Hatching Triage Sandbox.
 
     Any method that makes HTTP requests (calls ``_request``) may raise either
-    a ``PyHatchingRequestError`` or ``PyHatchingParseError``.
+    a ``PyHatchingRequestError`` or ``PyHatchingValidateError``.
 
     Additionally, any method that returns a Pydantic model (``base.HatchingResponse``)
-    may raise a ``PyHatchingParseError``. If ``raise_on_api_err`` is ``True``, these
-    methods may raise a ``PyHatchingResponseError`` as well.
+    may raise a ``PyHatchingValidateError``. If ``raise_on_api_err`` is ``True``, these
+    methods may raise a ``PyHatchingApiError`` as well.
     
     If a specific method also explicitly raises exceptions, it will be documented.
 
@@ -189,7 +189,7 @@ class PyHatchingClient:
         PyHatchingRequestError
             If there was an error (not an HTTP response error code)
             in the process of making a request.
-        PyHatchingParseError
+        PyHatchingValidateError
             If the JSON response could not be parsed.
         """
 
@@ -209,7 +209,7 @@ class PyHatchingClient:
             ) from err
 
         except JSONDecodeError as err:
-            raise errors.PyHatchingParseError(
+            raise errors.PyHatchingValidateError(
                 f"Unable to parse the response json: {err}"
             ) from err
 
@@ -240,7 +240,7 @@ class PyHatchingClient:
             sample_id = sample
 
         if sample_id is None:
-            raise errors.PyHatchingParseError(
+            raise errors.PyHatchingValidateError(
                 f"Unable to determine sample_id from: {sample}"
             )
 
@@ -346,7 +346,7 @@ class PyHatchingClient:
         hash_prefix = utils.hash_type(file_hash)
 
         if hash_prefix is None:
-            raise errors.PyHatchingParseError(
+            raise errors.PyHatchingValidateError(
                 f"The input hash is not valid according to 'utils.hash_type': {file_hash}"
             )
 
