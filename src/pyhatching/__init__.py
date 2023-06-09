@@ -9,5 +9,8 @@ unless bytes makes more sense for the endpoint (samples, pcaps).
 __version__ = "0.0.2"
 """The version of pyhatching."""
 
-BASE_URL = "https://tria.ge/api/v0/"
+BASE_URL = "https://tria.ge"
 """The default URL for requests - the public/free version."""
+
+API_PATH = "/api/v0"
+"""The base path used by all API endpoints used for requests."""

@@ -12,7 +12,7 @@ from . import base
 from . import enums
 from . import errors
 from . import utils
-from . import BASE_URL, __version__
+from . import API_PATH, BASE_URL, __version__
 
 
 def convert_to_model(
@@ -78,6 +78,26 @@ def convert_to_model(
     return ret
 
 
+async def new_client(
+    api_key: str,
+    url: str = BASE_URL,
+    timeout: int = 60,
+    raise_on_api_err: bool = False,
+    **kwargs,
+):
+    """Factory to create a new ``PyHatchingCLient`` instance."""
+
+    client = PyHatchingClient(
+        api_key,
+        url,
+        timeout,
+        raise_on_api_err,
+        **kwargs,
+    )
+    await client.start()
+    return client
+
+
 class PyHatchingClient:
     """An async HTTP client that interfaces with the Hatching Triage Sandbox.
 
@@ -87,7 +107,7 @@ class PyHatchingClient:
     Additionally, any method that returns a Pydantic model (``base.HatchingResponse``)
     may raise a ``PyHatchingValidateError``. If ``raise_on_api_err`` is ``True``, these
     methods may raise a ``PyHatchingApiError`` as well.
-    
+
     If a specific method also explicitly raises exceptions, it will be documented.
 
     Catch all handled errors with ``PyHatchingError``.
@@ -129,18 +149,25 @@ class PyHatchingClient:
         timeout: int = 60,
         raise_on_api_err: bool = False,
     ) -> None:
+        self.url = url
         self.api_key = api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "User-Agent": f"{aiohttp.http.SERVER_SOFTWARE} pyhatching/{__version__}",
         }
+
         self.timeout = aiohttp.ClientTimeout(total=timeout)
-        self.session = aiohttp.ClientSession(
-            base_url=url, headers=self.headers, timeout=self.timeout
-        )
+        self.session = None
 
         self.convert_resp = functools.partial(
             convert_to_model, raise_on_api_err=raise_on_api_err
+        )
+
+    async def start(self):
+        """Start the client session."""
+
+        self.session = aiohttp.ClientSession(
+            base_url=self.url, headers=self.headers, timeout=self.timeout
         )
 
     async def _request(
@@ -195,7 +222,7 @@ class PyHatchingClient:
 
         try:
             resp = await self.session.request(
-                method, uri, data=data, json=json, params=params
+                method, f"{API_PATH}{uri}", data=data, json=json, params=params
             )
 
             if raw:
@@ -215,6 +242,14 @@ class PyHatchingClient:
 
         return resp, resp_json
 
+    async def norm_sample(self, sample: str) -> str | None:
+        """Return a sample ID if sample is a hash, otherwise pass it back."""
+        if utils.is_hash(sample):
+            sample_id = await self.sample_id(sample)
+        else:
+            sample_id = sample
+        return sample_id
+
     async def download_sample(self, sample: str) -> bytes | None:
         """Download a sample's bytes by the given ID.
 
@@ -224,25 +259,24 @@ class PyHatchingClient:
             The sample to download, this can be any of the following
             as the value is passed to ``sample_id`` if needed to find the ID::
 
-                sample_id, md5, sha1, sha2, ssdeep
+                sample uuid, md5, sha1, sha2, ssdeep
+
+        Raises
+        ------
+        PyHatchingError
+            When a sample cannot be found.
 
         Returns
         -------
         bytes
             The downloaded bytes.
         None
-            If no bytes can be downloaded.
+            If no bytes can be downloaded or the sample is not found.
         """
 
-        if utils.is_hash(sample):
-            sample_id = await self.sample_id(sample)
-        else:
-            sample_id = sample
-
+        sample_id = await self.norm_sample(sample)
         if sample_id is None:
-            raise errors.PyHatchingValidateError(
-                f"Unable to determine sample_id from: {sample}"
-            )
+            return None
 
         resp, _ = await self._request("get", f"/samples/{sample_id}/sample", raw=True)
 
@@ -251,6 +285,40 @@ class PyHatchingClient:
             return sample_bytes
 
         return None
+
+    async def get_sample(self, sample: str) -> base.SampleInfo | base.ErrorResponse:
+        """Get metadata about a sample by hash or sample ID.
+
+        Parameters
+        ----------
+        sample : str
+            The sample to download, this can be any of the following
+            as the value is passed to ``sample_id`` if needed to find the ID::
+
+                sample uuid, md5, sha1, sha2, ssdeep
+
+        Raises
+        ------
+        PyHatchingError
+            When a sample cannot be found.
+
+        Returns
+        -------
+        base.SampleInfo
+            The sample's metadata
+        base.ErrorResponse
+            If the API returns an error.
+        None
+            If the sample is not found.
+        """
+
+        sample_id = await self.norm_sample(sample)
+        if sample_id is None:
+            return None
+
+        resp, resp_dict = await self._request("get", f"/samples/{sample}")
+
+        return self.convert_resp(base.SampleInfo, resp, resp_dict)
 
     async def get_profile(
         self, profile_id: str
@@ -305,6 +373,10 @@ class PyHatchingClient:
             If successful, the returned Yara rule.
         """
 
+        resp, resp_dict = await self._request("get", f"/yara/{rule_name}")
+
+        return self.convert_resp(base.YaraRule, resp, resp_dict)
+
     async def get_rules(self) -> base.YaraRules:
         """Get all Yara rules tied to your account.
 
@@ -314,7 +386,11 @@ class PyHatchingClient:
             If successful, the returned Yara rules.
         """
 
-    async def overview(self, sample: str) -> base.OverviewReport:
+        resp, resp_dict = await self._request("get", f"/yara")
+
+        return self.convert_resp(base.YaraRules, resp, resp_dict)
+
+    async def overview(self, sample: str) -> base.OverviewReport | base.ErrorResponse:
         """Return a sample's Overview Report.
 
         Parameters
@@ -323,13 +399,27 @@ class PyHatchingClient:
             The sample to download, this can be any of the following
             as the value is passed to ``sample_id`` if needed to find the ID::
 
-                sample_id, md5, sha1, sha2, ssdeep
+                sample uuid, md5, sha1, sha2, ssdeep
 
         Returns
         -------
         base.OverviewReport
             If successful, the return Overview Report.
+        base.ErrorResponse
+            If there was an error.
+        None
+            If the sample is not found.
         """
+
+        sample_id = await self.norm_sample(sample)
+        if sample_id is None:
+            return None
+
+        resp, resp_dict = await self._request(
+            "get", f"/samples/{sample_id}/overview.json"
+        )
+
+        return self.convert_resp(base.OverviewReport, resp, resp_dict)
 
     async def sample_id(self, file_hash: str) -> str | None:
         """Find the ID of a sample by the given hash, uses ``search`` under the hood.
