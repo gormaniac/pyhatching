@@ -81,9 +81,18 @@ async def do_yara(client: PyHatchingClient, args):
             print(f"Wrote {rule.name} to {args.path}")
         if rule.warnings:
             print(f"Rule warnings!\n\n{rule.warnings}\n")
-    if args.action == "update":
-        raise NotImplementedError()
-    if args.action == "create":
-        raise NotImplementedError()
+    if args.action in ("create", "update"):
+        with open(args.path, "r") as fd:
+            rule_str = fd.read()
+        # TODO Print the response here
+        if args.action == "create":
+            await client.submit_rule(args.name, rule_str)
+        else:
+            await client.update_rule(args.name, rule_str)
     if args.action == "export":
-        raise NotImplementedError()
+        rules = await client.get_rules()
+        if check_and_print_err(rule):
+            return
+        for rule in rules.rules:
+            with open(args.path + rule.name, "w") as fd:
+                fd.write(rule.rule)
