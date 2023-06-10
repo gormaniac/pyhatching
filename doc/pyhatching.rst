@@ -12,14 +12,6 @@ pyhatching.base module
    :undoc-members:
    :show-inheritance:
 
-pyhatching.client module
-------------------------
-
-.. automodule:: pyhatching.client
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pyhatching.enums module
 -----------------------
 

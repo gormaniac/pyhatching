@@ -99,6 +99,7 @@
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.OverviewTarget"><code class="docutils literal notranslate"><span class="pre">OverviewTarget</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.Ransom"><code class="docutils literal notranslate"><span class="pre">Ransom</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.ReportedFailure"><code class="docutils literal notranslate"><span class="pre">ReportedFailure</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.SampleInfo"><code class="docutils literal notranslate"><span class="pre">SampleInfo</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.SamplesResponse"><code class="docutils literal notranslate"><span class="pre">SamplesResponse</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.Signature"><code class="docutils literal notranslate"><span class="pre">Signature</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.SubmissionRequest"><code class="docutils literal notranslate"><span class="pre">SubmissionRequest</span></code></a></li>
@@ -107,11 +108,6 @@
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.TaskSummary"><code class="docutils literal notranslate"><span class="pre">TaskSummary</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.YaraRule"><code class="docutils literal notranslate"><span class="pre">YaraRule</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.base.YaraRules"><code class="docutils literal notranslate"><span class="pre">YaraRules</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="pyhatching.html#module-pyhatching.client">pyhatching.client module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.client.PyHatchingClient"><code class="docutils literal notranslate"><span class="pre">PyHatchingClient</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.client.convert_to_model"><code class="docutils literal notranslate"><span class="pre">convert_to_model()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="pyhatching.html#module-pyhatching.enums">pyhatching.enums module</a><ul>
@@ -131,10 +127,13 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="pyhatching.html#module-pyhatching.errors">pyhatching.errors module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingApiError"><code class="docutils literal notranslate"><span class="pre">PyHatchingApiError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingConnError"><code class="docutils literal notranslate"><span class="pre">PyHatchingConnError</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingError"><code class="docutils literal notranslate"><span class="pre">PyHatchingError</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingParseError"><code class="docutils literal notranslate"><span class="pre">PyHatchingParseError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingJsonError"><code class="docutils literal notranslate"><span class="pre">PyHatchingJsonError</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingRequestError"><code class="docutils literal notranslate"><span class="pre">PyHatchingRequestError</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingResponseError"><code class="docutils literal notranslate"><span class="pre">PyHatchingResponseError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingValidateError"><code class="docutils literal notranslate"><span class="pre">PyHatchingValidateError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.errors.PyHatchingValueError"><code class="docutils literal notranslate"><span class="pre">PyHatchingValueError</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="pyhatching.html#module-pyhatching.utils">pyhatching.utils module</a><ul>
@@ -143,7 +142,11 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="pyhatching.html#module-pyhatching">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.API_PATH"><code class="docutils literal notranslate"><span class="pre">API_PATH</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.BASE_URL"><code class="docutils literal notranslate"><span class="pre">BASE_URL</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.PyHatchingClient"><code class="docutils literal notranslate"><span class="pre">PyHatchingClient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.convert_to_model"><code class="docutils literal notranslate"><span class="pre">convert_to_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyhatching.html#pyhatching.new_client"><code class="docutils literal notranslate"><span class="pre">new_client()</span></code></a></li>
 </ul>
 </li>
 </ul>
