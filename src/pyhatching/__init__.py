@@ -607,14 +607,19 @@ class PyHatchingClient:
             "post", "/profiles", json={k: v for k, v in data.items() if v is not None}
         )
 
-        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
+        return self.convert_resp(base.HatchingProfileResponse, resp, resp_dict)
 
     async def _write_rule(self, method: str, name: str, contents: str):
         """A generic method to create/update a yara rule."""
 
-        data = {"name": name, "contents": contents}
+        data = {"name": name, "rule": contents}
 
-        resp, resp_dict = await self._request(method, "/yara", json=data)
+        if method == "put":
+            uri = f"/yara/{name}"
+        else:
+            uri = "/yara"
+
+        resp, resp_dict = await self._request(method, uri, json=data)
 
         if "error" in resp_dict:
             return self.convert_resp(base.ErrorResponse, resp, resp_dict)

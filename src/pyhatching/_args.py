@@ -18,17 +18,18 @@ MAIN_PARSER.add_argument(
     action="store_true",
 )
 MAIN_PARSER.add_argument(
-    "-t",
     "--token",
     help="Use this token instead of the HATCHING_TOKEN environment variable.",
 )
-SUBPARSER = MAIN_PARSER.add_subparsers(dest="command", title="Commands")
+SUBPARSER = MAIN_PARSER.add_subparsers(dest="command", title="Commands", required=True)
 
 PROFILE_PARSER = SUBPARSER.add_parser(
     "profile",
     description="Work with sandbox profiles",
 )
-PROFILE_SUBPARSER = PROFILE_PARSER.add_subparsers(dest="action", title="Actions")
+PROFILE_SUBPARSER = PROFILE_PARSER.add_subparsers(
+    dest="action", title="Actions", required=True
+)
 GET_PROFILE_PARSER = PROFILE_SUBPARSER.add_parser(
     "get",
     description="Download a given sample by uuid or hash.",
@@ -52,14 +53,12 @@ CREATE_PROFILE_PARSER.add_argument(
     help="The name to give the new profile.",
 )
 CREATE_PROFILE_PARSER.add_argument(
-    "-t",
     "--tags",
     help="The tags for the new profile.",
     nargs="+",
     default=[],
 )
 CREATE_PROFILE_PARSER.add_argument(
-    "-t",
     "--timeout",
     help="The new profile's timeout.",
     type=int,
@@ -84,7 +83,9 @@ SAMPLES_PARSER = SUBPARSER.add_parser(
     description="Search for, submit, download, and get reporting on sandbox "
     "samples. Supports the following hashes: md5, sha1, sha2, ssdeep",
 )
-SAMPLES_SUBPARSER = SAMPLES_PARSER.add_subparsers(dest="action", title="Actions")
+SAMPLES_SUBPARSER = SAMPLES_PARSER.add_subparsers(
+    dest="action", title="Actions", required=True
+)
 DOWNLOAD_SAMPLES_PARSER = SAMPLES_SUBPARSER.add_parser(
     "download",
     description="Download a given sample by uuid or hash.",
@@ -162,14 +163,12 @@ SUBMIT_SAMPLES_PARSER.add_argument(
     help="If the given sample is a zip, execute this child file within.",
 )
 SUBMIT_SAMPLES_PARSER.add_argument(
-    "-t",
     "--tags",
     help="The user tags to give this sample.",
     nargs="+",
     default=None,
 )
 SUBMIT_SAMPLES_PARSER.add_argument(
-    "-ti",
     "--timeout",
     help="The sandbox timeout for this analysis.",
 )
@@ -192,12 +191,10 @@ YARA_PARSER = SUBPARSER.add_parser(
 YARA_PARSER.add_argument(
     "action",
     choices=("get", "update", "create", "export"),
-    help="Whether to get one rule, update/create a rule, or export all rules."
+    help="Whether to get one rule, update/create a rule, or export all rules.",
 )
 YARA_PARSER.add_argument(
-    "-n",
-    "--name",
-    help="The name of the rule to get/create/update."
+    "-n", "--name", help="The name of the rule to get/create/update."
 )
 YARA_PARSER.add_argument(
     "-p",

@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from . import PyHatchingClient
 from .base import ErrorResponse, SubmissionRequest
 
+
 def check_and_print_err(obj):
     """Check if obj is an ErrorResponse and print it before returning True, else False."""
     if isinstance(obj, ErrorResponse):
@@ -109,9 +110,10 @@ async def do_yara(client: PyHatchingClient, args):
         rule = await client.get_rule(args.name)
         if check_and_print_err(rule):
             return
-        with open(args.path, "w") as fd:
+        fpath = args.path if args.path else args.name
+        with open(fpath, "w") as fd:
             fd.write(rule.rule)
-            print(f"Wrote {rule.name} to {args.path}")
+            print(f"Wrote {rule.name} to {fpath}")
         if rule.warnings:
             print(f"Rule warnings!\n\n{rule.warnings}\n")
     if args.action in ("create", "update"):
@@ -119,9 +121,15 @@ async def do_yara(client: PyHatchingClient, args):
             rule_str = fd.read()
         # TODO Print the response here
         if args.action == "create":
-            await client.submit_rule(args.name, rule_str)
+            ret = await client.submit_rule(args.name, rule_str)
         else:
-            await client.update_rule(args.name, rule_str)
+            ret = await client.update_rule(args.name, rule_str)
+        if check_and_print_err(ret):
+            return
+        if ret is None:
+            print(f"Successfully {args.action}d {args.name}!")
+        else:
+            print(ret)
     if args.action == "export":
         rules = await client.get_rules()
         if check_and_print_err(rule):
