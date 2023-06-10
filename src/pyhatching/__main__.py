@@ -8,7 +8,7 @@ from ._args import MAIN_PARSER
 from .errors import PyHatchingError
 
 
-async def main():
+async def async_main():
     """Main function for the CLI."""
 
     args = MAIN_PARSER.parse_args()
@@ -36,5 +36,10 @@ async def main():
             print(f"{err.__class__.__name__} while executing {args.command}: {err}")
 
 
+def main():
+    """A synchronous main function that just passes ``async_main`` to ``asyncio.run``."""
+    asyncio.run(async_main())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
