@@ -607,6 +607,18 @@ class PyHatchingClient:
 
         return self.convert_resp(base.SamplesResponse, resp, resp_dict)
 
+    async def _write_rule(self, method: str, name: str, contents: str):
+        """A generic method to create/update a yara rule."""
+
+        data = {"name": name, "contents": contents}
+
+        resp, resp_dict = await self._request(method, "/yara", json=data)
+
+        if "error" in resp_dict:
+            return self.convert_resp(base.ErrorResponse, resp, resp_dict)
+
+        return None
+
     async def submit_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
         """Submit a Yara rule to your account.
 
@@ -622,6 +634,8 @@ class PyHatchingClient:
         base.ErrorResponse | None
             None if successful, otherwise the returned ErrorResponse.
         """
+
+        return await self._write_rule("post", name, contents)
 
     async def submit_sample(
         self,
@@ -648,13 +662,14 @@ class PyHatchingClient:
         tags: list[str],
         timeout: int,
         network: enums.ProfileNetworkOptions,
-        name: str | None = None,
-        profile_id: str | None = None,
+        name: str,
+        profile_id: str,
     ) -> None | base.ErrorResponse:
         """Update the given profile.
 
-        One of ``name`` or ``profile_id`` must be set. Otherwise, ValueError is raised.
-        Both parameters cannot be used at the same time.
+        See `profile docs`_ for how this endpoint behaves, all args are required.
+
+        Does not support name changes - only updating IDs in place.
 
         Parameters
         ----------
@@ -676,10 +691,18 @@ class PyHatchingClient:
 
         Raises
         ------
-        ValueError
+        PyHatchingValueError
             If both ``name`` and ``profile_id`` are not set.
             Or if both parameters are set.
         """
+
+        data = {"name": name, "tags": tags, "timeout": timeout, "network": network}
+
+        resp, resp_dict = await self._request(
+            "post", f"/profiles/{profile_id}", json=data
+        )
+
+        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
 
     async def update_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
         """Update an existing Yara rule.
@@ -696,3 +719,5 @@ class PyHatchingClient:
         base.ErrorResponse | None
             None if successful, otherwise the returned ErrorResponse.
         """
+
+        return await self._write_rule("put", name, contents)

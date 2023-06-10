@@ -1,9 +1,10 @@
 """Commands for the main func to dispatch."""
 
 import json
+from pydantic import ValidationError
 
 from . import PyHatchingClient
-from .base import ErrorResponse
+from .base import ErrorResponse, SubmissionRequest
 
 def check_and_print_err(obj):
     """Check if obj is an ErrorResponse and print it before returning True, else False."""
@@ -66,8 +67,24 @@ async def do_samples(client: PyHatchingClient, args):
             fd.write(json.dumps(report, indent=2))
 
     else:
-        raise NotImplementedError()
-        success = await client.submit_sample(None ,args.path)
+        try:
+            submit_args = SubmissionRequest(
+                kind=args.kind,
+                url=args.url,
+                target=args.target,
+                interactive=args.interactive,
+                password=args.password,
+                profiles=[{"profile": args.profile, "pick": args.pick}],
+                user_tags=args.user_tags,
+                defaults={"network": args.network, "timeout": args.timeout}
+            )
+        except ValidationError as err:
+            print(f"Unable to validate sample submission args: {err}")
+            return
+        sample = await client.submit_sample(submit_args, args.path)
+        if check_and_print_err(report):
+            return
+        print(sample)
 
 
 async def do_search(client: PyHatchingClient, args):

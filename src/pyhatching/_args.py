@@ -119,6 +119,15 @@ REPORT_SAMPLES_PARSER.add_argument(
     "--sample",
     help="The sample id or hash to get a report on.",
 )
+SUBMIT_SAMPLES_PARSER = SAMPLES_SUBPARSER.add_parser(
+    "submit",
+    description="Submit a file to the sandbox.",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-s",
+    "--sample",
+    help="The sample id or hash to get a report on.",
+)
 
 YARA_PARSER = SUBPARSER.add_parser(
     "yara",
