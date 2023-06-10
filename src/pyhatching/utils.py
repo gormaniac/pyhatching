@@ -42,12 +42,12 @@ def hash_type(input_hash: str) -> enums.HashPrefixes | None:
     """
 
     if SHA5RE.search(input_hash):
-        return enums.HashPrefixes.SHA5
+        return enums.HashPrefixes.SHA5.value
     if SHA2RE.search(input_hash):
-        return enums.HashPrefixes.SHA2
+        return enums.HashPrefixes.SHA2.value
     if SHA1RE.search(input_hash):
-        return enums.HashPrefixes.SHA1
+        return enums.HashPrefixes.SHA1.value
     if MD5RE.search(input_hash):
-        return enums.HashPrefixes.MD5
+        return enums.HashPrefixes.MD5.value
 
     return None

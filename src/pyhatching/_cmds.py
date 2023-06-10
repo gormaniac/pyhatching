@@ -1,9 +1,11 @@
 """Commands for the main func to dispatch."""
 
 import json
+from pydantic import ValidationError
 
-from .client import PyHatchingClient
-from .base import ErrorResponse
+from . import PyHatchingClient
+from .base import ErrorResponse, SubmissionRequest
+
 
 def check_and_print_err(obj):
     """Check if obj is an ErrorResponse and print it before returning True, else False."""
@@ -24,8 +26,18 @@ async def do_profile(client: PyHatchingClient, args):
     elif args.action == "get" and args.profile is None:
         print("Must specify a profile to get!")
         return
-    else:
+    elif args.action == "get":
         profile = await client.get_profile(args.profile)
+        if check_and_print_err(profile):
+            return
+        print(profile)
+    elif args.action == "create":
+        profile = await client.submit_profile(
+            args.name,
+            args.tags,
+            args.timeout,
+            args.network,
+        )
         if check_and_print_err(profile):
             return
         print(profile)
@@ -55,9 +67,31 @@ async def do_samples(client: PyHatchingClient, args):
         with open(args.path, "w") as fd:
             fd.write(json.dumps(report, indent=2))
 
-    else:
-        raise NotImplementedError()
-        success = await client.submit_sample(None ,args.path)
+    elif args.action == "submit":
+        profile_args = {"profile": args.profile, "pick": args.pick}
+        profile = {k: v for k, v in profile_args.items() if v is not None}
+
+        defaults_args = {"network": args.network, "timeout": args.timeout}
+        defaults = {k: v for k, v in defaults_args.items() if v is not None}
+
+        try:
+            submit_args = SubmissionRequest(
+                kind=args.kind,
+                url=args.url,
+                target=args.target,
+                interactive=args.interactive,
+                password=args.password,
+                profiles=[profile] if profile else None,
+                user_tags=args.tags,
+                defaults=defaults if defaults else None,
+            )
+        except ValidationError as err:
+            print(f"Unable to validate sample submission args: {err}")
+            return
+        sample = await client.submit_sample(submit_args, args.file)
+        if check_and_print_err(report):
+            return
+        print(sample)
 
 
 async def do_search(client: PyHatchingClient, args):
@@ -76,14 +110,30 @@ async def do_yara(client: PyHatchingClient, args):
         rule = await client.get_rule(args.name)
         if check_and_print_err(rule):
             return
-        with open(args.path, "w") as fd:
+        fpath = args.path if args.path else args.name
+        with open(fpath, "w") as fd:
             fd.write(rule.rule)
-            print(f"Wrote {rule.name} to {args.path}")
+            print(f"Wrote {rule.name} to {fpath}")
         if rule.warnings:
             print(f"Rule warnings!\n\n{rule.warnings}\n")
-    if args.action == "update":
-        raise NotImplementedError()
-    if args.action == "create":
-        raise NotImplementedError()
+    if args.action in ("create", "update"):
+        with open(args.path, "r") as fd:
+            rule_str = fd.read()
+        # TODO Print the response here
+        if args.action == "create":
+            ret = await client.submit_rule(args.name, rule_str)
+        else:
+            ret = await client.update_rule(args.name, rule_str)
+        if check_and_print_err(ret):
+            return
+        if ret is None:
+            print(f"Successfully {args.action}d {args.name}!")
+        else:
+            print(ret)
     if args.action == "export":
-        raise NotImplementedError()
+        rules = await client.get_rules()
+        if check_and_print_err(rule):
+            return
+        for rule in rules.rules:
+            with open(args.path + rule.name, "w") as fd:
+                fd.write(rule.rule)

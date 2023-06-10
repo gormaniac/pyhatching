@@ -19,7 +19,7 @@ Examples:
         samples_details = await client.search("tag:beacon")
         pprint.pp([s.dict() for s in samples_details], indent=2)
 
-- Using the new_client factory method - supports same args as PyHatchingClient::
+- Using the ``new_client`` factory method - supports same args as ``PyHatchingClient``::
 
     client = async pyhatching.new_client(api_key=<token>)
     # Catch all errors handled by Pyhatching
@@ -31,8 +31,7 @@ Examples:
     print(sample.dict())
     client.close()  # Don't forget to close the client's session when you're done!
 
-- If you'd like to init the class itself, you'll need to call the ``start()``
-method before making any requests::
+- If you'd like to init the class itself, you'll need to call the ``start()`` method before making any requests::
 
     client = pyhatching.PyHatchingClient(api_key=<token>)
     await client.start()
@@ -44,8 +43,7 @@ method before making any requests::
         pprint.pp(report.dict(), indent=2)
     client.close()
 
-- If you don't like the above pattern of ``ErrorResponse`` return types, you
-can pass ``raise_on_api_err=True`` to ``PyHatchingClient``::
+- If you don't like the above pattern of ``ErrorResponse`` return types, you can pass ``raise_on_api_err=True`` to ``PyHatchingClient``::
 
     async with pyhatching.PyHatchingClient(
         api_key=<token>, raise_on_api_err=True
@@ -70,7 +68,9 @@ can pass ``raise_on_api_err=True`` to ``PyHatchingClient``::
 
 
 import functools
+import hashlib
 from json import JSONDecodeError
+import os
 import pathlib
 
 import aiohttp
@@ -82,7 +82,7 @@ from . import errors
 from . import utils
 
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 """The version of pyhatching."""
 
 BASE_URL = "https://tria.ge"
@@ -200,7 +200,7 @@ class PyHatchingClient:
     raise_on_api_err : bool, optional
         Whether to raise when the Hatching Triage API returns an API error response
         (an HTTP 200 response that describes a handled error with the request).
-        See the `docs`_ for further information.
+        See the `API docs`_ for further information.
 
     Attributes
     ----------
@@ -216,7 +216,7 @@ class PyHatchingClient:
         A ``functools.partial`` for ``convert_to_model`` with ```raise_on_api_err``
         saved so that it doesn't have to be passed to each method call.
 
-    .. _docs: https://tria.ge/docs/cloud-api/conventions/
+    .. _API docs: https://tria.ge/docs/cloud-api/conventions/
     """
 
     def __init__(
@@ -240,7 +240,9 @@ class PyHatchingClient:
             convert_to_model, raise_on_api_err=raise_on_api_err
         )
 
-    async def __aenter__(self,):
+    async def __aenter__(
+        self,
+    ):
         await self.start()
         return self
 
@@ -261,7 +263,7 @@ class PyHatchingClient:
         self,
         method: str,
         uri: str,
-        data: dict | None = None,
+        data: aiohttp.MultipartWriter | None = None,
         json: dict | None = None,
         params: dict | None = None,
         raw: bool = False,
@@ -446,7 +448,7 @@ class PyHatchingClient:
 
         return self.convert_resp(base.HatchingProfileResponse, resp, resp_dict)
 
-    async def get_rule(self, rule_name: str) -> base.YaraRule:
+    async def get_rule(self, rule_name: str) -> base.YaraRule | base.ErrorResponse:
         """Get a single Yara rule by name.
 
         Parameters
@@ -464,7 +466,7 @@ class PyHatchingClient:
 
         return self.convert_resp(base.YaraRule, resp, resp_dict)
 
-    async def get_rules(self) -> base.YaraRules:
+    async def get_rules(self) -> base.YaraRules | base.ErrorResponse:
         """Get all Yara rules tied to your account.
 
         Returns
@@ -576,8 +578,8 @@ class PyHatchingClient:
         self,
         name: str,
         tags: list[str],
-        timeout: int,
-        network: enums.ProfileNetworkOptions,
+        timeout: int | None,
+        network: enums.ProfileNetworkOptions | None,
     ) -> None | base.ErrorResponse:
         """Add a new sandbox analysis profile to your account.
 
@@ -599,6 +601,31 @@ class PyHatchingClient:
             None if successful, else ``base.ErrorResponse``.
         """
 
+        data = {"name": name, "tags": tags, "timeout": timeout, "network": network}
+
+        resp, resp_dict = await self._request(
+            "post", "/profiles", json={k: v for k, v in data.items() if v is not None}
+        )
+
+        return self.convert_resp(base.HatchingProfileResponse, resp, resp_dict)
+
+    async def _write_rule(self, method: str, name: str, contents: str):
+        """A generic method to create/update a yara rule."""
+
+        data = {"name": name, "rule": contents}
+
+        if method == "put":
+            uri = f"/yara/{name}"
+        else:
+            uri = "/yara"
+
+        resp, resp_dict = await self._request(method, uri, json=data)
+
+        if "error" in resp_dict:
+            return self.convert_resp(base.ErrorResponse, resp, resp_dict)
+
+        return None
+
     async def submit_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
         """Submit a Yara rule to your account.
 
@@ -615,11 +642,72 @@ class PyHatchingClient:
             None if successful, otherwise the returned ErrorResponse.
         """
 
-    async def submit_sample(
+        return await self._write_rule("post", name, contents)
+
+    async def _submit_sample(
+        self,
+        json: dict | None = None,
+        data: aiohttp.MultipartWriter | None = None,
+    ):
+        """Actually make the submit sample HTTP request."""
+
+        resp, resp_dict = await self._request("post", "/samples", json=json, data=data)
+        return resp, resp_dict
+
+    async def _submit_fetch(
+        self,
+        submit_req: base.SubmissionRequest,
+    ):
+        """Submit a file hosted at a URL for the sandbox to download and analyze."""
+
+        return await self._submit_sample(json=submit_req.dict(exclude_none=True))
+
+    async def _submit_file(
         self,
         submit_req: base.SubmissionRequest,
         sample: bytes | pathlib.Path | str,
-    ) -> base.SamplesResponse:
+    ):
+        """Submit a file to the sandbox for analysis."""
+
+        mpwriter = aiohttp.MultipartWriter()
+
+        if isinstance(sample, bytes):
+            fpart = mpwriter.append(sample)
+
+            if not submit_req.target:
+                fhash = hashlib.md5(sample).hexdigest()
+                raise errors.PyHatchingValueError(
+                    f"Must specify a filename when passing submitting bytes ({fhash})"
+                )
+
+            fpart.set_content_disposition(
+                "form-data", name="file", filename=submit_req.target
+            )
+
+        else:
+            try:
+                with open(sample, "rb") as fd:
+                    mpwriter.append(fd)
+            except OSError as err:
+                raise errors.PyHatchingFileError(
+                    f"Unable to read {sample}: {err}"
+                ) from err
+
+        jpart = mpwriter.append(submit_req.json(exclude_none=True))
+        jpart.set_content_disposition("form-data", name="_json")
+
+        return await self._submit_sample(data=mpwriter)
+
+    async def _submit_url(self, url: str):
+        """Submit a url to the sandbox for analysis."""
+
+        return await self._submit_sample(json={"url": url})
+
+    async def submit_sample(
+        self,
+        submit_req: base.SubmissionRequest,
+        sample: bytes | pathlib.Path | str | None,
+    ) -> base.SamplesResponse | base.ErrorResponse:
         """Submit a sample to the sandbox based on the given ``SubmissionRequest``.
 
         Parameters
@@ -633,20 +721,42 @@ class PyHatchingClient:
         -------
         base.SamplesResponse
             If successful, the newly created sample object.
+        base.ErrorResponse
+            If the API reports an error with the submission.
         """
+
+        if submit_req.kind == "file":
+            if sample is None:
+                raise errors.PyHatchingValueError(
+                    "No file specified for file based submission."
+                )
+            path = os.path.expandvars(os.path.expanduser(sample))
+            resp, resp_dict = await self._submit_file(submit_req, path)
+        else:
+            if submit_req.url is None:
+                raise errors.PyHatchingValueError(
+                    "No URL specified for url based submission."
+                )
+            if submit_req.kind == "url":
+                resp, resp_dict = await self._submit_url(submit_req.url)
+            elif submit_req.kind == "fetch":
+                resp, resp_dict = await self._submit_fetch(submit_req)
+
+        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
 
     async def update_profile(
         self,
         tags: list[str],
         timeout: int,
         network: enums.ProfileNetworkOptions,
-        name: str | None = None,
-        profile_id: str | None = None,
+        name: str,
+        profile_id: str,
     ) -> None | base.ErrorResponse:
         """Update the given profile.
 
-        One of ``name`` or ``profile_id`` must be set. Otherwise, ValueError is raised.
-        Both parameters cannot be used at the same time.
+        See `profile docs`_ for how this endpoint behaves, all args are required.
+
+        Does not support name changes - only updating IDs in place.
 
         Parameters
         ----------
@@ -668,10 +778,20 @@ class PyHatchingClient:
 
         Raises
         ------
-        ValueError
+        PyHatchingValueError
             If both ``name`` and ``profile_id`` are not set.
             Or if both parameters are set.
+
+        .. _profile docs: https://tria.ge/docs/cloud-api/profiles/
         """
+
+        data = {"name": name, "tags": tags, "timeout": timeout, "network": network}
+
+        resp, resp_dict = await self._request(
+            "post", f"/profiles/{profile_id}", json=data
+        )
+
+        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
 
     async def update_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
         """Update an existing Yara rule.
@@ -688,3 +808,5 @@ class PyHatchingClient:
         base.ErrorResponse | None
             None if successful, otherwise the returned ErrorResponse.
         """
+
+        return await self._write_rule("put", name, contents)

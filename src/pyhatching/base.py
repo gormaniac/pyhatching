@@ -34,10 +34,10 @@ class SampleInfo(HatchingResponse):
     id: str
     status: enums.SubmissionStatuses
     kind: enums.SampleKinds
-    filename: Optional[str]
-    url: Optional[str]
     private: bool
     submitted: datetime.datetime
+    filename: Optional[str] = None
+    url: Optional[str] = None
 
 
 class SamplesResponse(SampleInfo):
@@ -50,8 +50,8 @@ class YaraRule(BaseModel):
     """A yara rule."""
 
     name: str
-    warnings: Optional[list[str]]
-    rule: Optional[str]
+    warnings: Optional[list[str]] = None
+    rule: Optional[str] = None
 
 
 class YaraRules(HatchingResponse):
@@ -82,15 +82,15 @@ class HatchingRequest(BaseModel):
 class SubmissionRequestDefaults(BaseModel):
     """Default sandbox paramaters for SubmissionRequest."""
 
-    timeout: Optional[int]
-    network: Optional[enums.SubmssionsRequestNetDefaults]
+    timeout: Optional[int] = None
+    network: Optional[enums.SubmssionsRequestNetDefaults] = None
 
 
 class HatchingProfileSubmission(BaseModel):
     """A sandbox submission profile object."""
 
-    profile: Optional[str]
-    pick: Optional[str]
+    profile: Optional[str] = None
+    pick: Optional[str] = None
 
 
 class SubmissionRequest(HatchingRequest):
@@ -100,119 +100,119 @@ class SubmissionRequest(HatchingRequest):
     """
 
     kind: enums.SubmissionKinds
-    url: Optional[str]
-    target: Optional[str]
-    interactive: Optional[bool]
-    password: Optional[str]
-    profiles: Optional[list[HatchingProfileSubmission]]
-    user_tags: Optional[list[str]]
-    defaults: SubmissionRequestDefaults
+    url: Optional[str] = None
+    target: Optional[str] = None
+    interactive: Optional[bool] = None
+    password: Optional[str] = None
+    profiles: Optional[list[HatchingProfileSubmission]] = None
+    user_tags: Optional[list[str]] = None
+    defaults: Optional[SubmissionRequestDefaults] = None
 
 
 class TaskSummary(BaseModel):
     """The summary of a task."""
 
     sample: str
-    kind: Optional[str]
-    name: Optional[str]
-    status: Optional[str]
-    ttp: Optional[list[str]]
-    tags: Optional[list[str]]
-    score: Optional[int]
-    target: Optional[str]
-    backend: Optional[str]
-    resource: Optional[str]
-    platform: Optional[str]
-    task_name: Optional[str]
-    failure: Optional[str]
-    queue_id: Optional[int]
-    pick: Optional[str]
+    kind: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+    ttp: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
+    score: Optional[int] = None
+    target: Optional[str] = None
+    backend: Optional[str] = None
+    resource: Optional[str] = None
+    platform: Optional[str] = None
+    task_name: Optional[str] = None
+    failure: Optional[str] = None
+    queue_id: Optional[int] = None
+    pick: Optional[str] = None
 
 
 class OverviewAnalysis(BaseModel):
     """Quick overview of analysis results."""
 
     score: int
-    family: Optional[list[str]]
-    tags: Optional[list[str]]
+    family: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
 
 
 class ReportedFailure(BaseModel):
     """An API failure."""
 
-    task: Optional[str]
-    backend: Optional[str]
     reason: str
+    task: Optional[str] = None
+    backend: Optional[str] = None
 
 
 class TargetDesc(BaseModel):
     """The description of a target (or analyzed object)."""
 
-    id: Optional[str]
-    score: Optional[int]
-    submitted: Optional[datetime.datetime]
-    completed: Optional[datetime.datetime]
-    target: Optional[str]
-    pick: Optional[str]
-    type: Optional[str]
-    size: Optional[int]
-    md5: Optional[str]
-    sha1: Optional[str]
-    sha256: Optional[str]
-    sha512: Optional[str]
-    filetype: Optional[str]
-    static_tags: Optional[list[str]]
+    id: Optional[str] = None
+    score: Optional[int] = None
+    submitted: Optional[datetime.datetime] = None
+    completed: Optional[datetime.datetime] = None
+    target: Optional[str] = None
+    pick: Optional[str] = None
+    type: Optional[str] = None
+    size: Optional[int] = None
+    md5: Optional[str] = None
+    sha1: Optional[str] = None
+    sha256: Optional[str] = None
+    sha512: Optional[str] = None
+    filetype: Optional[str] = None
+    static_tags: Optional[list[str]] = None
 
 
 class Indicator(BaseModel):
     """A single IOC hit of an analyzed sample."""
 
-    ioc: Optional[str]
-    description: Optional[str]
-    at: Optional[int]  # NOTE These had `uint32` go types, does `int` work?
-    pid: Optional[int]  # NOTE These had `uint64` go types, does `int` work?
-    procid: Optional[int]  # NOTE These had `int32` go types, does `int` work?
-    pid_target: Optional[int]  # NOTE These had `uint64` go types, does `int` work?
-    procid_target: Optional[int]  # NOTE These had `int32` go types, does `int` work?
-    flow: Optional[int]
-    stream: Optional[int]
-    dump_file: Optional[str]
-    resource: Optional[str]
-    yara_rule: Optional[str]
+    ioc: Optional[str] = None
+    description: Optional[str] = None
+    at: Optional[int] = None
+    pid: Optional[int] = None
+    procid: Optional[int] = None
+    pid_target: Optional[int] = None
+    procid_target: Optional[int] = None
+    flow: Optional[int] = None
+    stream: Optional[int] = None
+    dump_file: Optional[str] = None
+    resource: Optional[str] = None
+    yara_rule: Optional[str] = None
 
 
 class Signature(BaseModel):
     """A Yara rule hit."""
 
-    label: Optional[str]
-    name: Optional[str]
-    score: Optional[int]
-    ttp: Optional[list[str]]
-    tags: Optional[list[str]]
-    indicators: Optional[list[Indicator]]
-    yara_rule: Optional[str]
-    desc: Optional[str]
-    url: Optional[str]
+    label: Optional[str] = None
+    name: Optional[str] = None
+    score: Optional[int] = None
+    ttp: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
+    indicators: Optional[list[Indicator]] = None
+    yara_rule: Optional[str] = None
+    desc: Optional[str] = None
+    url: Optional[str] = None
 
 
 class OverviewIOCs(BaseModel):
     """An overview of the IOCs observed during analysis."""
 
-    urls: Optional[list[str]]
-    domains: Optional[list[str]]
-    ips: Optional[list[str]]
+    urls: Optional[list[str]] = None
+    domains: Optional[list[str]] = None
+    ips: Optional[list[str]] = None
 
 
 class Credentials(BaseModel):
     """Credentials captured during analysis."""
 
-    pass_: str
-    flow: Optional[int]
-    protocol: Optional[str]
-    host: Optional[str]
-    port: Optional[int]
     user: str
-    email_to: Optional[str]
+    pass_: str = Field(alias="pass")
+    flow: Optional[int] = None
+    protocol: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    email_to: Optional[str] = None
 
     @classmethod
     def parse_obj(cls, obj: Any) -> "Credentials":
@@ -276,40 +276,40 @@ class Key(BaseModel):
 class Config(BaseModel):
     """A malware samples's configuration extracted during analysis."""
 
-    family: Optional[str]
-    tags: Optional[list[str]]
-    rule: Optional[str]
-    c2: Optional[list[str]]
-    version: Optional[str]
-    botnet: Optional[str]
-    campaign: Optional[str]
-    mutex: Optional[list[str]]
-    decoy: Optional[list[str]]
-    wallet: Optional[list[str]]
-    dns: Optional[list[str]]
-    keys: Optional[list[Key]]
-    webinject: Optional[list[str]]
-    command_lines: Optional[list[str]]
-    listen_addr: Optional[str]
-    listen_port: Optional[int]
-    listen_for: Optional[list[str]]
-    shellcode: Optional[list[bytes]]
-    extracted_pe: Optional[list[str]]
-    credentials: Optional[list[Credentials]]
-    attr: Optional[dict]
-    raw: Optional[str]
+    family: Optional[str] = None
+    tags: Optional[list[str]] = None
+    rule: Optional[str] = None
+    c2: Optional[list[str]] = None
+    version: Optional[str] = None
+    botnet: Optional[str] = None
+    campaign: Optional[str] = None
+    mutex: Optional[list[str]] = None
+    decoy: Optional[list[str]] = None
+    wallet: Optional[list[str]] = None
+    dns: Optional[list[str]] = None
+    keys: Optional[list[Key]] = None
+    webinject: Optional[list[str]] = None
+    command_lines: Optional[list[str]] = None
+    listen_addr: Optional[str] = None
+    listen_port: Optional[int] = None
+    listen_for: Optional[list[str]] = None
+    shellcode: Optional[list[bytes]] = None
+    extracted_pe: Optional[list[str]] = None
+    credentials: Optional[list[Credentials]] = None
+    attr: Optional[dict] = None
+    raw: Optional[str] = None
 
 
 class Ransom(BaseModel):
     """A ransomware note observed during analysis."""
 
-    family: Optional[str]
-    target: Optional[str]
-    emails: Optional[list[str]]
-    wallets: Optional[list[str]]
-    urls: Optional[list[str]]
-    contact: Optional[list[str]]
     note: str
+    family: Optional[str] = None
+    target: Optional[str] = None
+    emails: Optional[list[str]] = None
+    wallets: Optional[list[str]] = None
+    urls: Optional[list[str]] = None
+    contact: Optional[list[str]] = None
 
 
 class DropperURL(BaseModel):
@@ -322,69 +322,69 @@ class DropperURL(BaseModel):
 class Dropper(BaseModel):
     """A malware that downloads other malware."""
 
-    family: Optional[str]
     language: str
-    source: Optional[str]
-    deobfuscated: Optional[str]
     urls: list[DropperURL]
+    family: Optional[str] = None
+    source: Optional[str] = None
+    deobfuscated: Optional[str] = None
 
 
 class OverviewTarget(BaseModel):
     """A summary of the target (analyzed object) and findings."""
 
     tasks: list[str]
-    id: Optional[str]
-    score: Optional[int]
-    submitted: Optional[datetime.datetime]
-    completed: Optional[datetime.datetime]
-    target: Optional[str]
-    pick: Optional[str]
-    type: Optional[str]
-    size: Optional[int]
-    md5: Optional[str]
-    sha1: Optional[str]
-    sha256: Optional[str]
-    sha512: Optional[str]
-    filetype: Optional[str]
-    static_tags: Optional[list[str]]
-    tags: Optional[list[str]]
-    family: Optional[list[str]]
-    signatures: list[Signature]
-    iocs: Optional[OverviewIOCs]
+    id: Optional[str] = None
+    score: Optional[int] = None
+    submitted: Optional[datetime.datetime] = None
+    completed: Optional[datetime.datetime] = None
+    target: Optional[str] = None
+    pick: Optional[str] = None
+    type: Optional[str] = None
+    size: Optional[int] = None
+    md5: Optional[str] = None
+    sha1: Optional[str] = None
+    sha256: Optional[str] = None
+    sha512: Optional[str] = None
+    filetype: Optional[str] = None
+    static_tags: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
+    family: Optional[list[str]] = None
+    signatures: list[Signature] = None
+    iocs: Optional[OverviewIOCs] = None
 
 
 class OverviewExtracted(BaseModel):
     """Collection of data extracted during analysis."""
 
     tasks: list[str]
-    dumped_file: Optional[str]
-    resource: Optional[str]
-    config: Optional[Config]
-    path: Optional[str]
-    ransom_note: Optional[Ransom]
-    dropper: Optional[Dropper]
-    credentials: Optional[Credentials]
+    dumped_file: Optional[str] = None
+    resource: Optional[str] = None
+    config: Optional[Config] = None
+    path: Optional[str] = None
+    ransom_note: Optional[Ransom] = None
+    dropper: Optional[Dropper] = None
+    credentials: Optional[Credentials] = None
 
 
 class OverviewSample(BaseModel):
     """Information on the analyzed sample, very similar to OverviewTarget but w/o tasks."""
 
-    id: Optional[str]
-    score: Optional[int]
-    target: Optional[str]
-    pick: Optional[str]
-    type: Optional[str]
-    size: Optional[int]
-    md5: Optional[str]
-    sha1: Optional[str]
-    sha256: Optional[str]
-    sha512: Optional[str]
-    filetype: Optional[str]
-    static_tags: Optional[list[str]]
-    submitted: Optional[datetime.datetime]
-    created: datetime.datetime
-    completed: datetime.datetime
-    iocs: Optional[OverviewIOCs]
+    id: Optional[str] = None
+    score: Optional[int] = None
+    target: Optional[str] = None
+    pick: Optional[str] = None
+    type: Optional[str] = None
+    size: Optional[int] = None
+    md5: Optional[str] = None
+    sha1: Optional[str] = None
+    sha256: Optional[str] = None
+    sha512: Optional[str] = None
+    filetype: Optional[str] = None
+    static_tags: Optional[list[str]] = None
+    submitted: Optional[datetime.datetime] = None
+    created: Optional[datetime.datetime] = None
+    completed: Optional[datetime.datetime] = None
+    iocs: Optional[OverviewIOCs] = None
 
 
 class OverviewReport(HatchingResponse):
@@ -392,9 +392,9 @@ class OverviewReport(HatchingResponse):
 
     version: str
     sample: OverviewSample
-    tasks: Optional[list[TaskSummary]]
     analysis: OverviewAnalysis
     targets: list[OverviewTarget]
-    errors: Optional[list[ReportedFailure]]
-    signatures: Optional[list[Signature]]
-    extracted: Optional[list[OverviewExtracted]]
+    tasks: Optional[list[TaskSummary]] = None
+    errors: Optional[list[ReportedFailure]] = None
+    signatures: Optional[list[Signature]] = None
+    extracted: Optional[list[OverviewExtracted]] = None

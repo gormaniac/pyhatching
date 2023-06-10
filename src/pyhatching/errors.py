@@ -4,12 +4,16 @@ class PyHatchingError(Exception):
     """An error in the pyhatching library."""
 
 
-class PyHatchingValueError(PyHatchingError):
+class PyHatchingFileError(PyHatchingError, OSError):
+    """An error occured while pyhatching was working with a file."""
+
+
+class PyHatchingValueError(PyHatchingError, ValueError):
     """An unexpected value was encountered by pyhatching."""
 
 
 class PyHatchingValidateError(PyHatchingError):
-    """An error validating a pyhatching JSON response."""
+    """An error validating a pyhatching Pydantic object."""
 
 
 class PyHatchingConnError(PyHatchingError):

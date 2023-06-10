@@ -13,12 +13,15 @@ async def main():
 
     args = MAIN_PARSER.parse_args()
 
-    if not args.token:
+    if args.token is None:
         if (token := os.environ.get("HATCHING_TOKEN")):
             args.token = token
         else:
             print("No token in $HATCHING_TOKEN or passed with --token!")
             return
+
+    if args.command is None:
+        print("Must specify a command!")
 
     try:
         cmd = getattr(_cmds, f"do_{args.command}")
@@ -28,9 +31,9 @@ async def main():
 
     async with PyHatchingClient(api_key=args.token) as client:
         try:
-            cmd(client, args)
+            await cmd(client, args)
         except PyHatchingError as err:
-            print(f"{str(type(err))} while executing {args.command}: {err}")
+            print(f"{err.__class__.__name__} while executing {args.command}: {err}")
 
 
 if __name__ == "__main__":
