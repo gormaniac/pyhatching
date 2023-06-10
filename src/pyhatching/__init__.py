@@ -781,6 +781,8 @@ class PyHatchingClient:
         PyHatchingValueError
             If both ``name`` and ``profile_id`` are not set.
             Or if both parameters are set.
+
+        .. _profile docs: https://tria.ge/docs/cloud-api/profiles/
         """
 
         data = {"name": name, "tags": tags, "timeout": timeout, "network": network}
