@@ -36,6 +36,9 @@ async def do_profile(client: PyHatchingClient, args):
             args.timeout,
             args.network,
         )
+        if check_and_print_err(profile):
+            return
+        print(profile)
 
 
 async def do_samples(client: PyHatchingClient, args):
