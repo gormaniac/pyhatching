@@ -50,22 +50,62 @@ SEARCH_PARSER.add_argument(
 
 SAMPLES_PARSER = SUBPARSER.add_parser(
     "samples",
-    description="Search for, submit, download, and get reporting on sandbox samples.",
+    description="Search for, submit, download, and get reporting on sandbox "
+    "samples. Supports the following hashes: md5, sha1, sha2, ssdeep",
 )
-SAMPLES_PARSER.add_argument(
-    "action",
-    help="What to do with this sample.",
-    choices=("download", "info", "report", "submit",)
+SAMPLES_SUBPARSER = SAMPLES_PARSER.add_subparsers(dest="action", title="Actions")
+DOWNLOAD_SAMPLES_PARSER = SAMPLES_SUBPARSER.add_parser(
+    "download",
+    description="Download a given sample by uuid or hash.",
 )
-SAMPLES_PARSER.add_argument(
+DOWNLOAD_SAMPLES_PARSER.add_argument(
     "-s",
     "--sample",
-    help="The sample id or hash of the sample to work with.",
+    help="The sample id or hash to download.",
 )
-SAMPLES_PARSER.add_argument(
+DOWNLOAD_SAMPLES_PARSER.add_argument(
     "-p",
     "--path",
-    help="The path of the sample to submit, the path to download the "
-    "sample to, or the path to save the report to.",
+    help="The path to save the file(s). If a dir is given the hash is used "
+    "as the filename to avoid accidental execution.",
+    type=pathlib.Path,
+)
+INFO_SAMPLES_PARSER = SAMPLES_SUBPARSER.add_parser(
+    "info",
+    description="Download a given sample by uuid or hash.",
+)
+INFO_SAMPLES_PARSER.add_argument(
+    "-s",
+    "--sample",
+    help="The sample id or hash to get info on.",
+)
+REPORT_SAMPLES_PARSER = SAMPLES_SUBPARSER.add_parser(
+    "report",
+    description="Get the overview report for a given sample by uuid or hash.",
+)
+REPORT_SAMPLES_PARSER.add_argument(
+    "-s",
+    "--sample",
+    help="The sample id or hash to get a report on.",
+)
+
+YARA_PARSER = SUBPARSER.add_parser(
+    "yara",
+    description="Manipulate sandbox Yara rules.",
+)
+YARA_PARSER.add_argument(
+    "action",
+    choices=("get", "update", "create", "export"),
+    help="Whether to get one rule, update/create a rule, or export all rules."
+)
+YARA_PARSER.add_argument(
+    "-n",
+    "--name",
+    help="The name of the rule to get/create/update."
+)
+YARA_PARSER.add_argument(
+    "-p",
+    "--path",
+    help="The rule to upload, or the download path (must be a dir for export).",
     type=pathlib.Path,
 )
