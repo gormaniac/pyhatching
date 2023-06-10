@@ -33,4 +33,5 @@ testpaths = [
     "tests",
     "integration",
 ]
+asyncio_mode = "auto"
 # addopts = "-ra -q"
