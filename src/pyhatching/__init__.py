@@ -68,7 +68,9 @@ Examples:
 
 
 import functools
+import hashlib
 from json import JSONDecodeError
+import os
 import pathlib
 
 import aiohttp
@@ -261,7 +263,7 @@ class PyHatchingClient:
         self,
         method: str,
         uri: str,
-        data: dict | None = None,
+        data: aiohttp.MultipartWriter | None = None,
         json: dict | None = None,
         params: dict | None = None,
         raw: bool = False,
@@ -446,7 +448,7 @@ class PyHatchingClient:
 
         return self.convert_resp(base.HatchingProfileResponse, resp, resp_dict)
 
-    async def get_rule(self, rule_name: str) -> base.YaraRule:
+    async def get_rule(self, rule_name: str) -> base.YaraRule | base.ErrorResponse:
         """Get a single Yara rule by name.
 
         Parameters
@@ -464,7 +466,7 @@ class PyHatchingClient:
 
         return self.convert_resp(base.YaraRule, resp, resp_dict)
 
-    async def get_rules(self) -> base.YaraRules:
+    async def get_rules(self) -> base.YaraRules | base.ErrorResponse:
         """Get all Yara rules tied to your account.
 
         Returns
@@ -637,11 +639,70 @@ class PyHatchingClient:
 
         return await self._write_rule("post", name, contents)
 
-    async def submit_sample(
+    async def _submit_sample(
+        self,
+        json: dict | None = None,
+        data: aiohttp.MultipartWriter | None = None,
+    ):
+        """Actually make the submit sample HTTP request."""
+
+        resp, resp_dict = await self._request("post", "/samples", json=json, data=data)
+        return resp, resp_dict
+
+    async def _submit_fetch(
+        self,
+        submit_req: base.SubmissionRequest,
+    ):
+        """Submit a file hosted at a URL for the sandbox to download and analyze."""
+
+        return await self._submit_sample(json=submit_req.dict(exclude_none=True))
+
+    async def _submit_file(
         self,
         submit_req: base.SubmissionRequest,
         sample: bytes | pathlib.Path | str,
-    ) -> base.SamplesResponse:
+    ):
+        """Submit a file to the sandbox for analysis."""
+
+        mpwriter = aiohttp.MultipartWriter()
+
+        if isinstance(sample, bytes):
+            fpart = mpwriter.append(sample)
+
+            if not submit_req.target:
+                fhash = hashlib.md5(sample).hexdigest()
+                raise errors.PyHatchingValueError(
+                    f"Must specify a filename when passing submitting bytes ({fhash})"
+                )
+
+            fpart.set_content_disposition(
+                "form-data", name="file", filename=submit_req.target
+            )
+
+        else:
+            try:
+                with open(sample, "rb") as fd:
+                    mpwriter.append(fd)
+            except OSError as err:
+                raise errors.PyHatchingFileError(
+                    f"Unable to read {sample}: {err}"
+                ) from err
+
+        jpart = mpwriter.append(submit_req.json(exclude_none=True))
+        jpart.set_content_disposition("form-data", name="_json")
+
+        return await self._submit_sample(data=mpwriter)
+
+    async def _submit_url(self, url: str):
+        """Submit a url to the sandbox for analysis."""
+
+        return await self._submit_sample(json={"url": url})
+
+    async def submit_sample(
+        self,
+        submit_req: base.SubmissionRequest,
+        sample: bytes | pathlib.Path | str | None,
+    ) -> base.SamplesResponse | base.ErrorResponse:
         """Submit a sample to the sandbox based on the given ``SubmissionRequest``.
 
         Parameters
@@ -655,8 +716,28 @@ class PyHatchingClient:
         -------
         base.SamplesResponse
             If successful, the newly created sample object.
+        base.ErrorResponse
+            If the API reports an error with the submission.
         """
-        raise NotImplementedError()
+
+        if submit_req.kind == "file":
+            if sample is None:
+                raise errors.PyHatchingValueError(
+                    "No file specified for file based submission."
+                )
+            path = os.path.expandvars(os.path.expanduser(sample))
+            resp, resp_dict = await self._submit_file(submit_req, path)
+        else:
+            if submit_req.url is None:
+                raise errors.PyHatchingValueError(
+                    "No URL specified for url based submission."
+                )
+            if submit_req.kind == "url":
+                resp, resp_dict = await self._submit_url(submit_req.url)
+            elif submit_req.kind == "fetch":
+                resp, resp_dict = await self._submit_fetch(submit_req)
+
+        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
 
     async def update_profile(
         self,

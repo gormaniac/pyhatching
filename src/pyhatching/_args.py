@@ -178,6 +178,12 @@ SUBMIT_SAMPLES_PARSER.add_argument(
     "--network",
     help="The sandbox network config for this analysis.",
 )
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-f",
+    "--file",
+    help="The path to a local file to upload.",
+    default=None,
+)
 
 YARA_PARSER = SUBPARSER.add_parser(
     "yara",

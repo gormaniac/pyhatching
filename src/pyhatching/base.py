@@ -100,13 +100,13 @@ class SubmissionRequest(HatchingRequest):
     """
 
     kind: enums.SubmissionKinds
-    url: Optional[str]
-    target: Optional[str]
-    interactive: Optional[bool]
-    password: Optional[str]
-    profiles: Optional[list[HatchingProfileSubmission]]
-    user_tags: Optional[list[str]]
-    defaults: SubmissionRequestDefaults
+    url: Optional[str] = None
+    target: Optional[str] = None
+    interactive: Optional[bool] = None
+    password: Optional[str] = None
+    profiles: Optional[list[HatchingProfileSubmission]] = None
+    user_tags: Optional[list[str]] = None
+    defaults: Optional[SubmissionRequestDefaults] = None
 
 
 class TaskSummary(BaseModel):

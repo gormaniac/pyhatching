@@ -66,25 +66,28 @@ async def do_samples(client: PyHatchingClient, args):
         with open(args.path, "w") as fd:
             fd.write(json.dumps(report, indent=2))
 
-    else:
+    elif args.action == "submit":
+        profile_args = {"profile": args.profile, "pick": args.pick}
+        profile = {k: v for k, v in profile_args.items() if v is not None}
+
+        defaults_args = {"network": args.network, "timeout": args.timeout}
+        defaults = {k: v for k, v in defaults_args.items() if v is not None}
+
         try:
-            profile = {"profile": args.profile, "pick": args.pick}
-            profile = {k: v for k, v in profile.items() if v is not None}
-            defaults = {"network": args.network, "timeout": args.timeout}
             submit_args = SubmissionRequest(
                 kind=args.kind,
                 url=args.url,
                 target=args.target,
                 interactive=args.interactive,
                 password=args.password,
-                profiles=[profile] if profile else [],
+                profiles=[profile] if profile else None,
                 user_tags=args.tags,
-                defaults={k: v for k, v in defaults.items() if v is not None}
+                defaults=defaults if defaults else None,
             )
         except ValidationError as err:
             print(f"Unable to validate sample submission args: {err}")
             return
-        sample = await client.submit_sample(submit_args, args.path)
+        sample = await client.submit_sample(submit_args, args.file)
         if check_and_print_err(report):
             return
         print(sample)
