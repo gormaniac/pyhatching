@@ -19,7 +19,7 @@ Examples:
         samples_details = await client.search("tag:beacon")
         pprint.pp([s.dict() for s in samples_details], indent=2)
 
-- Using the new_client factory method - supports same args as PyHatchingClient::
+- Using the ``new_client`` factory method - supports same args as ``PyHatchingClient``::
 
     client = async pyhatching.new_client(api_key=<token>)
     # Catch all errors handled by Pyhatching
@@ -31,8 +31,7 @@ Examples:
     print(sample.dict())
     client.close()  # Don't forget to close the client's session when you're done!
 
-- If you'd like to init the class itself, you'll need to call the ``start()``
-method before making any requests::
+- If you'd like to init the class itself, you'll need to call the ``start()`` method before making any requests::
 
     client = pyhatching.PyHatchingClient(api_key=<token>)
     await client.start()
@@ -44,8 +43,7 @@ method before making any requests::
         pprint.pp(report.dict(), indent=2)
     client.close()
 
-- If you don't like the above pattern of ``ErrorResponse`` return types, you
-can pass ``raise_on_api_err=True`` to ``PyHatchingClient``::
+- If you don't like the above pattern of ``ErrorResponse`` return types, you can pass ``raise_on_api_err=True`` to ``PyHatchingClient``::
 
     async with pyhatching.PyHatchingClient(
         api_key=<token>, raise_on_api_err=True
@@ -200,7 +198,7 @@ class PyHatchingClient:
     raise_on_api_err : bool, optional
         Whether to raise when the Hatching Triage API returns an API error response
         (an HTTP 200 response that describes a handled error with the request).
-        See the `docs`_ for further information.
+        See the `API docs`_ for further information.
 
     Attributes
     ----------
@@ -216,7 +214,7 @@ class PyHatchingClient:
         A ``functools.partial`` for ``convert_to_model`` with ```raise_on_api_err``
         saved so that it doesn't have to be passed to each method call.
 
-    .. _docs: https://tria.ge/docs/cloud-api/conventions/
+    .. _API docs: https://tria.ge/docs/cloud-api/conventions/
     """
 
     def __init__(
