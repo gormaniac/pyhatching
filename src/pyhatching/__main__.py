@@ -3,9 +3,8 @@
 import asyncio
 import os
 
-from . import _cmds
+from . import _cmds, PyHatchingClient
 from ._args import MAIN_PARSER
-from .client import PyHatchingClient
 from .errors import PyHatchingError
 
 
