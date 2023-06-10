@@ -14,11 +14,11 @@ async def main():
     args = MAIN_PARSER.parse_args()
 
     if not args.token:
-        token = os.environ.get("HATCHING_TOKEN")
-        if token:
+        if (token := os.environ.get("HATCHING_TOKEN")):
             args.token = token
         else:
             print("No token in $HATCHING_TOKEN or passed with --token!")
+            return
 
     try:
         cmd = getattr(_cmds, f"do_{args.command}")
