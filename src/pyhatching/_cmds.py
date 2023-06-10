@@ -24,11 +24,18 @@ async def do_profile(client: PyHatchingClient, args):
     elif args.action == "get" and args.profile is None:
         print("Must specify a profile to get!")
         return
-    else:
+    elif args.action == "get":
         profile = await client.get_profile(args.profile)
         if check_and_print_err(profile):
             return
         print(profile)
+    elif args.action == "create":
+        profile = await client.submit_profile(
+            args.name,
+            args.tags,
+            args.timeout,
+            args.network,
+        )
 
 
 async def do_samples(client: PyHatchingClient, args):

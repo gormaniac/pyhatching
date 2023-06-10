@@ -238,7 +238,9 @@ class PyHatchingClient:
             convert_to_model, raise_on_api_err=raise_on_api_err
         )
 
-    async def __aenter__(self,):
+    async def __aenter__(
+        self,
+    ):
         await self.start()
         return self
 
@@ -574,8 +576,8 @@ class PyHatchingClient:
         self,
         name: str,
         tags: list[str],
-        timeout: int,
-        network: enums.ProfileNetworkOptions,
+        timeout: int | None,
+        network: enums.ProfileNetworkOptions | None,
     ) -> None | base.ErrorResponse:
         """Add a new sandbox analysis profile to your account.
 
@@ -596,6 +598,14 @@ class PyHatchingClient:
         None | base.ErrorResponse
             None if successful, else ``base.ErrorResponse``.
         """
+
+        data = {"name": name, "tags": tags, "timeout": timeout, "network": network}
+
+        resp, resp_dict = await self._request(
+            "post", "/profiles", json={k: v for k, v in data.items() if v is not None}
+        )
+
+        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
 
     async def submit_rule(self, name: str, contents: str) -> base.ErrorResponse | None:
         """Submit a Yara rule to your account.

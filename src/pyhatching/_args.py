@@ -28,15 +28,46 @@ PROFILE_PARSER = SUBPARSER.add_parser(
     "profile",
     description="Work with sandbox profiles",
 )
-PROFILE_PARSER.add_argument(
-    "action",
-    choices=("get", "list"),
-    help="Whether to get a specific profile or list them all."
+PROFILE_SUBPARSER = PROFILE_PARSER.add_subparsers(dest="action", title="Actions")
+GET_PROFILE_PARSER = PROFILE_SUBPARSER.add_parser(
+    "get",
+    description="Download a given sample by uuid or hash.",
 )
-PROFILE_PARSER.add_argument(
+GET_PROFILE_PARSER.add_argument(
     "-p",
     "--profile",
-    help="The profile name or ID to get.",
+    help="The sandbox profile name or ID to get.",
+)
+LIST_PROFILE_PARSER = PROFILE_SUBPARSER.add_parser(
+    "list",
+    description="List all sandbox profiles.",
+)
+CREATE_PROFILE_PARSER = PROFILE_SUBPARSER.add_parser(
+    "create",
+    description="Create a new sandbox profile.",
+)
+CREATE_PROFILE_PARSER.add_argument(
+    "-n",
+    "--name",
+    help="The name to give the new profile.",
+)
+CREATE_PROFILE_PARSER.add_argument(
+    "-t",
+    "--tags",
+    help="The tags for the new profile.",
+    nargs="+",
+    default=[],
+)
+CREATE_PROFILE_PARSER.add_argument(
+    "-t",
+    "--timeout",
+    help="The new profile's timeout.",
+    type=int,
+)
+CREATE_PROFILE_PARSER.add_argument(
+    "--network",
+    help="The new profile's network config - see "
+    "https://tria.ge/docs/cloud-api/profiles/ for options.",
 )
 
 SEARCH_PARSER = SUBPARSER.add_parser(
