@@ -26,3 +26,11 @@ Documentation = "https://gormo.co/pyhatching/"
 [tool.setuptools.packages.find]
 namespaces = true
 where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = [
+    "tests",
+    "integration",
+]
+# addopts = "-ra -q"
