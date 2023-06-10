@@ -28,8 +28,8 @@ class ErrorResponse(HatchingResponse):
     message: str
 
 
-class SamplesResponse(HatchingResponse):
-    """Response object for POST /samples."""
+class SampleInfo(HatchingResponse):
+    """Sample metadata."""
 
     id: str
     status: enums.SubmissionStatuses
@@ -38,6 +38,11 @@ class SamplesResponse(HatchingResponse):
     url: Optional[str]
     private: bool
     submitted: datetime.datetime
+
+
+class SamplesResponse(SampleInfo):
+    """Response object for POST /samples."""
+
     completed: datetime.datetime
 
 
