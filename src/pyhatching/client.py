@@ -163,12 +163,22 @@ class PyHatchingClient:
             convert_to_model, raise_on_api_err=raise_on_api_err
         )
 
+    async def __aenter__(self,):
+        await self.start()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close()
+
     async def start(self):
         """Start the client session."""
-
         self.session = aiohttp.ClientSession(
             base_url=self.url, headers=self.headers, timeout=self.timeout
         )
+
+    async def close(self):
+        """Close the client session."""
+        await self.session.close()
 
     async def _request(
         self,
@@ -386,7 +396,7 @@ class PyHatchingClient:
             If successful, the returned Yara rules.
         """
 
-        resp, resp_dict = await self._request("get", f"/yara")
+        resp, resp_dict = await self._request("get", "/yara")
 
         return self.convert_resp(base.YaraRules, resp, resp_dict)
 
