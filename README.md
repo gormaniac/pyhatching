@@ -9,3 +9,5 @@ Supports:
 - Individual sample retrieval
 - Profile getting/setting
 - Yara rule getting/setting
+
+Read the full documentation [here](https://gormo.co/pyhatching/).
