@@ -2,7 +2,7 @@
 
 import json
 
-from .client import PyHatchingClient
+from . import PyHatchingClient
 from .base import ErrorResponse
 
 def check_and_print_err(obj):

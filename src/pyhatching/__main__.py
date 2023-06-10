@@ -28,7 +28,7 @@ async def main():
 
     async with PyHatchingClient(api_key=args.token) as client:
         try:
-            cmd(client, args)
+            await cmd(client, args)
         except PyHatchingError as err:
             print(f"{str(type(err))} while executing {args.command}: {err}")
 
