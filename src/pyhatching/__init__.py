@@ -656,6 +656,7 @@ class PyHatchingClient:
         base.SamplesResponse
             If successful, the newly created sample object.
         """
+        raise NotImplementedError()
 
     async def update_profile(
         self,

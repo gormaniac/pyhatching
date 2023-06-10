@@ -68,15 +68,18 @@ async def do_samples(client: PyHatchingClient, args):
 
     else:
         try:
+            profile = {"profile": args.profile, "pick": args.pick}
+            profile = {k: v for k, v in profile.items() if v is not None}
+            defaults = {"network": args.network, "timeout": args.timeout}
             submit_args = SubmissionRequest(
                 kind=args.kind,
                 url=args.url,
                 target=args.target,
                 interactive=args.interactive,
                 password=args.password,
-                profiles=[{"profile": args.profile, "pick": args.pick}],
-                user_tags=args.user_tags,
-                defaults={"network": args.network, "timeout": args.timeout}
+                profiles=[profile] if profile else [],
+                user_tags=args.tags,
+                defaults={k: v for k, v in defaults.items() if v is not None}
             )
         except ValidationError as err:
             print(f"Unable to validate sample submission args: {err}")

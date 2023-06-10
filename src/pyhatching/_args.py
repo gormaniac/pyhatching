@@ -124,9 +124,59 @@ SUBMIT_SAMPLES_PARSER = SAMPLES_SUBPARSER.add_parser(
     description="Submit a file to the sandbox.",
 )
 SUBMIT_SAMPLES_PARSER.add_argument(
-    "-s",
-    "--sample",
-    help="The sample id or hash to get a report on.",
+    "-k",
+    "--kind",
+    help="The kind of sandbox submission.",
+    choices=("file", "url", "fetch"),
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-u",
+    "--url",
+    help="The URL to fetch or analyze.",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-t",
+    "--target",
+    help="The name to give the submitted file when executed in the sandbox. "
+    "Uses filename on disk otherwise.",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-i",
+    "--interactive",
+    help="Run the sandbox in interactive mode - may mess with automation.",
+    action="store_true",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-pw",
+    "--password",
+    help="The decryption password if the given sample is an encrypted zip.",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-p",
+    "--profile",
+    help="The name of the profile to use for analysis.",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-pi",
+    "--pick",
+    help="If the given sample is a zip, execute this child file within.",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-t",
+    "--tags",
+    help="The user tags to give this sample.",
+    nargs="+",
+    default=None,
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-ti",
+    "--timeout",
+    help="The sandbox timeout for this analysis.",
+)
+SUBMIT_SAMPLES_PARSER.add_argument(
+    "-n",
+    "--network",
+    help="The sandbox network config for this analysis.",
 )
 
 YARA_PARSER = SUBPARSER.add_parser(
