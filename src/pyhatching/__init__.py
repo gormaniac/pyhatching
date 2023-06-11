@@ -67,11 +67,14 @@ Examples:
 """
 
 
+import asyncio
+import datetime
 import functools
 import hashlib
 from json import JSONDecodeError
 import os
 import pathlib
+from typing import Any
 
 import aiohttp
 from pydantic.error_wrappers import ValidationError  # pylint: disable=E0611
@@ -485,7 +488,7 @@ class PyHatchingClient:
         Parameters
         ----------
         sample : str
-            The sample to download, this can be any of the following
+            The sample to get a report on, this can be any of the following
             as the value is passed to ``sample_id`` if needed to find the ID::
 
                 sample uuid, md5, sha1, sha2, ssdeep
@@ -544,8 +547,96 @@ class PyHatchingClient:
 
         return None
 
+    async def summary(
+        self, sample: str
+    ) -> base.SummaryReport | base.ErrorResponse | None:
+        """Return a summary report for a given sample.
+
+        Parameters
+        ----------
+        sample : str
+            The sample to get a summary on, this can be any of the following
+            as the value is passed to ``sample_id`` if needed to find the ID::
+
+                sample uuid, md5, sha1, sha2, ssdeep
+
+        Returns
+        -------
+        base.SummaryReport | base.ErrorResponse | None
+            The summary report if successful, an ErrorResponse if the API
+            returned an error, or None if the sample hash doesn't exist in the sandbox.
+        """
+
+        sample_id = await self.norm_sample(sample)
+        if sample_id is None:
+            return None
+
+        resp, resp_dict = await self._request("get", f"/samples/{sample_id}/summary")
+
+        return self.convert_resp(base.SummaryReport, resp, resp_dict)
+
+    async def _summary_helper(self, sample):
+        """
+        Calls ``summary`` on ``sample`` and returns both that return val and ``sample``.
+        """
+
+        summary = await self.summary(sample)
+
+        return summary, sample
+
+    async def samples_to_hashes(
+        self, samples: list[base.SamplesResponse | base.SampleInfo | str]
+    ) -> list[tuple[str, str]]:
+        """Convert a list of samples to their hashes concurrently.
+
+        Parameters
+        ----------
+        samples : list[base.SamplesResponse  |  base.SampleInfo  |  str]
+            A list containing samples to be converted to hashes. They can be
+            SamplesResponse/SampleInfo objects, or a list of raw sample_ids.
+
+        Returns
+        -------
+        list[tuple[str, str]]
+            A list of tuples containing the retrieved hash + the sample_id it
+            was converted from.
+        """
+
+        tasks: list[asyncio.Task] = []
+        async with asyncio.TaskGroup() as taskgrp:
+            for sample in samples:
+                if isinstance(sample, str):
+                    sample_id = sample
+                elif isinstance(sample, base.SampleInfo):
+                    sample_id = sample.id
+                else:
+                    raise errors.PyHatchingValueError(
+                        f"Invalid samples_to_hashes input: {sample}"
+                    )
+
+                tasks.append(
+                    taskgrp.create_task(self.summary(sample_id), name=sample_id)
+                )
+
+        ret = []
+        for task in tasks:
+            if task.cancelled():
+                continue
+            # Call this seperately because the task can't be cancelled
+            if task.exception():
+                continue
+
+            summary = task.result()
+            if summary is None or isinstance(summary, base.ErrorResponse):
+                continue
+
+            ret.append(summary.sha256, task.get_name())
+
+        return ret
+
     async def search(
-        self, query: str
+        self,
+        query: str,
     ) -> list[base.SamplesResponse] | base.ErrorResponse:
         """Search the Hatching Triage Sandbox for samples matching ``query``.
 
@@ -567,7 +658,6 @@ class PyHatchingClient:
         .. _docs: https://tria.ge/docs/cloud-api/search/
         """
 
-        # TODO Handle pagination
         params = {"query": query}
 
         resp, resp_dict = await self._request("get", "/search", params=params)
@@ -677,7 +767,7 @@ class PyHatchingClient:
             if not submit_req.target:
                 fhash = hashlib.md5(sample).hexdigest()
                 raise errors.PyHatchingValueError(
-                    f"Must specify a filename when passing submitting bytes ({fhash})"
+                    f"Must specify a filename when submitting bytes ({fhash})"
                 )
 
             fpart.set_content_disposition(

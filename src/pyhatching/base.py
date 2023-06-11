@@ -28,6 +28,21 @@ class ErrorResponse(HatchingResponse):
     message: str
 
 
+class SummaryReport(HatchingResponse):
+    """A sample's summary report."""
+
+    sample: str
+    status: Optional[enums.SubmissionStatuses] = None
+    custom: Optional[str] =  None
+    owner: Optional[str] = None
+    target: Optional[str] = None
+    created: Optional[datetime.datetime] = None
+    completed: Optional[datetime.datetime] = None
+    score: Optional[int] = None
+    sha256: Optional[str] = None
+    tasks: Optional[dict] = None
+
+
 class SampleInfo(HatchingResponse):
     """Sample metadata."""
 
