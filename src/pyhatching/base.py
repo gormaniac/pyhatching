@@ -58,7 +58,7 @@ class SampleInfo(HatchingResponse):
 class SamplesResponse(SampleInfo):
     """Response object for POST /samples."""
 
-    completed: datetime.datetime
+    completed: Optional[datetime.datetime] = None
 
 
 class YaraRule(BaseModel):

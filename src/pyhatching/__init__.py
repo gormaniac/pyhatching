@@ -634,9 +634,26 @@ class PyHatchingClient:
 
         return ret
 
+    async def _search(
+        self,
+        query: str,
+        time_offset: str | datetime.datetime | None = None,
+        results_per_page: int = 100,
+    ) -> tuple[aiohttp.ClientResponse, dict]:
+
+        params = {"query": query, "limit": results_per_page}
+        if time_offset is not None:
+            params["offset"] = time_offset
+
+        resp, resp_dict = await self._request("get", "/search", params=params)
+
+        return resp, resp_dict
+
     async def search(
         self,
         query: str,
+        result_limit: int = 10000,
+        results_per_page: int = 100,
     ) -> list[base.SamplesResponse] | base.ErrorResponse:
         """Search the Hatching Triage Sandbox for samples matching ``query``.
 
@@ -658,11 +675,28 @@ class PyHatchingClient:
         .. _docs: https://tria.ge/docs/cloud-api/search/
         """
 
-        params = {"query": query}
+        results = []
+        offset = None
 
-        resp, resp_dict = await self._request("get", "/search", params=params)
+        while len(results) < result_limit:
+            resp, resp_dict = await self._search(
+                query, time_offset=offset, results_per_page=results_per_page
+            )
 
-        return self.convert_resp(base.SamplesResponse, resp, resp_dict)
+            query_ret = self.convert_resp(base.SamplesResponse, resp, resp_dict)
+
+            if isinstance(query_ret, base.ErrorResponse):
+                break
+
+            results.extend(query_ret)
+
+            if resp_dict.get("next") and len(query_ret) == results_per_page:
+                offset = resp_dict["next"]
+            else:
+                # This means we've reached the last page
+                break
+
+        return results
 
     async def submit_profile(
         self,
