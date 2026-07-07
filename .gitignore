@@ -4,3 +4,6 @@ build/*
 *.egg-info
 docs/.buildinfo
 docs/.doctrees/
+.pytest_cache/
+docs/
+dist/
