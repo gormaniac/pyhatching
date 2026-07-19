@@ -1,16 +1,9 @@
 """Types for pyhatching."""
 
 import datetime
-import json
 from typing import Any, Optional
 
-import aiohttp
-from pydantic import BaseModel, Field  # pylint: disable=E0611
-from pydantic.error_wrappers import (  # pylint: disable=E0611
-    ErrorWrapper,
-    ValidationError,
-)
-from pydantic.utils import ROOT_KEY  # pylint: disable=E0611
+from pydantic import BaseModel, ConfigDict, Field  # pylint: disable=E0611
 
 from . import enums
 
@@ -18,7 +11,7 @@ from . import enums
 class HatchingResponse(BaseModel):
     """A response from the Hatching Triage API."""
 
-    resp_obj = aiohttp.ClientResponse
+    resp_obj: Any = None
 
 
 class ErrorResponse(HatchingResponse):
@@ -206,6 +199,8 @@ class OverviewIOCs(BaseModel):
 class Credentials(BaseModel):
     """Credentials captured during analysis."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     user: str
     pass_: str = Field(alias="pass")
     flow: Optional[int] = None
@@ -214,55 +209,17 @@ class Credentials(BaseModel):
     port: Optional[int] = None
     email_to: Optional[str] = None
 
-    @classmethod
-    def parse_obj(cls, obj: Any) -> "Credentials":
-        """A custom parsing method to read in "pass" from a dict.
-        
-        Mostly copies `BaseModel.parse_obj`.
-        """
+    def dict(self, **kwargs: Any) -> dict:
+        """Custom dict to serialize ``pass_`` using its ``pass`` alias."""
 
-        obj = cls._enforce_dict_if_root(obj)
-        if not isinstance(obj, dict):
-            try:
-                obj = dict(obj)
-            except (TypeError, ValueError) as err:
-                exc = TypeError(
-                    f"{cls.__name__} expected dict not {obj.__class__.__name__}"
-                )
-                raise ValidationError([ErrorWrapper(exc, loc=ROOT_KEY)], cls) from err
+        kwargs.setdefault("by_alias", True)
+        return self.model_dump(**kwargs)
 
-        if "pass" in obj:
-            obj["pass_"] = obj.pop("pass")
+    def json(self, **kwargs: Any) -> str:
+        """Custom json that serializes ``pass_`` using its ``pass`` alias."""
 
-        return cls(**obj)
-
-    def dict(self, **kwargs: dict) -> dict:
-        """Custom dict to get rid of the ``_`` in ``pass_``.
-
-        Attempts to replicate ``BaseModel.dict`` by copying the ``self._iter`` call.
-        """
-
-        ret = dict(
-            self._iter(
-                to_dict=True,
-                by_alias=kwargs.get("by_alias", None),
-                include=kwargs.get("include", None),
-                exclude=kwargs.get("exclude", None),
-                exclude_unset=kwargs.get("exclude_unset", None),
-                exclude_defaults=kwargs.get("exclude_defaults", None),
-                exclude_none=kwargs.get("exclude_none", None),
-            )
-        )
-
-        if "pass_" in ret:
-            ret["pass"] = ret.pop("pass_")
-
-        return ret
-
-    def json(self, **kwargs: dict) -> dict:
-        """Custom json that uses this object's custom ``dict`` method."""
-
-        return json.dumps(self.dict(**kwargs))
+        kwargs.setdefault("by_alias", True)
+        return self.model_dump_json(**kwargs)
 
 
 class Key(BaseModel):

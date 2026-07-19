@@ -74,10 +74,9 @@ import os
 import pathlib
 
 import aiohttp
-from pydantic.error_wrappers import ValidationError  # pylint: disable=E0611
+from pydantic import ValidationError  # pylint: disable=E0611
 
 from . import base
-from . import enums
 from . import errors
 from . import utils
 
