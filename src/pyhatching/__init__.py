@@ -81,7 +81,7 @@ from . import errors
 from . import utils
 
 
-__version__ = "v0.3.0"
+__version__ = "0.3.1"
 """The version of pyhatching."""
 
 BASE_URL = "https://tria.ge"
