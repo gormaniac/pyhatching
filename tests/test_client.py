@@ -128,6 +128,11 @@ async def test_search_and_list(client, fake):
     hits = await client.search("family:cobaltstrike", limit=3)
     assert len(hits) == 1 and hits[0].id == ft.SAMPLE_ID
 
+    fake.samples["261031-url"] = dict(ft.SAMPLE, id="261031-url", kind="url", url="http://a.com/x")
+    hits = await client.search('url:"http://a.com/x"')
+    assert [h.id for h in hits] == ["261031-url"]
+    del fake.samples["261031-url"]
+
     samples = await client.get_samples("public", limit=4)
     assert [s.id for s in samples] == [f"261031-x{i}" for i in (4, 3, 2, 1)]
     assert fake.last()["query"] == {"subset": "public", "limit": "4"}

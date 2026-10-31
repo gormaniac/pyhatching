@@ -647,11 +647,15 @@ class FakeTriage:
 
         overview = self.overviews.get(sample["id"], {})
         info = overview.get("sample", {})
-        for term in query.split():
+        for term in query.split(" "):
             if ":" not in term:
                 continue
             key, valu = term.split(":", 1)
-            if key in ("md5", "sha1", "sha256", "sha512", "ssdeep"):
+            valu = valu.strip('"')
+            if key == "url":
+                if sample.get("url") != valu:
+                    return False
+            elif key in ("md5", "sha1", "sha256", "sha512", "ssdeep"):
                 if info.get(key, "").lower() != valu.lower():
                     return False
             elif key == "family":
@@ -742,6 +746,8 @@ class FakeTriage:
         for sample in samples:
             for status in EVENTS:
                 await resp.write(json.dumps(dict(sample, status=status)).encode() + b"\n")
+            # The analysis is done once its events end.
+            sample.update(status="reported", completed=COMPLETED)
         await resp.write_eof()
         return resp
 
