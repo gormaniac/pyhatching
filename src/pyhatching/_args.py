@@ -120,6 +120,13 @@ REPORT_SAMPLES_PARSER.add_argument(
     "--sample",
     help="The sample id or hash to get a report on.",
 )
+REPORT_SAMPLES_PARSER.add_argument(
+    "-p",
+    "--path",
+    help="The path to save the overview report (JSON) to.",
+    type=pathlib.Path,
+    required=True,
+)
 SUBMIT_SAMPLES_PARSER = SAMPLES_SUBPARSER.add_parser(
     "submit",
     description="Submit a file to the sandbox.",

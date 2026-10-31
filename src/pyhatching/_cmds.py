@@ -1,6 +1,5 @@
 """Commands for the main func to dispatch."""
 
-import json
 from pydantic import ValidationError
 
 from . import PyHatchingClient
@@ -10,7 +9,7 @@ from .base import ErrorResponse, SubmissionRequest
 def check_and_print_err(obj):
     """Check if obj is an ErrorResponse and print it before returning True, else False."""
     if isinstance(obj, ErrorResponse):
-        print(f"{obj.error.value}: {obj.message}")
+        print(f"{obj.error}: {obj.message}")
         return True
     return False
 
@@ -65,7 +64,7 @@ async def do_samples(client: PyHatchingClient, args):
         if check_and_print_err(report):
             return
         with open(args.path, "w") as fd:
-            fd.write(json.dumps(report, indent=2))
+            fd.write(report.json(indent=2))
 
     elif args.action == "submit":
         profile_args = {"profile": args.profile, "pick": args.pick}
@@ -89,7 +88,7 @@ async def do_samples(client: PyHatchingClient, args):
             print(f"Unable to validate sample submission args: {err}")
             return
         sample = await client.submit_sample(submit_args, args.file)
-        if check_and_print_err(report):
+        if check_and_print_err(sample):
             return
         print(sample)
 
@@ -132,8 +131,8 @@ async def do_yara(client: PyHatchingClient, args):
             print(ret)
     if args.action == "export":
         rules = await client.get_rules()
-        if check_and_print_err(rule):
+        if check_and_print_err(rules):
             return
         for rule in rules.rules:
-            with open(args.path + rule.name, "w") as fd:
+            with open(args.path / rule.name, "w") as fd:
                 fd.write(rule.rule)

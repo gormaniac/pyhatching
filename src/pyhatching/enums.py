@@ -16,6 +16,9 @@ class SubmssionsRequestNetDefaults(Enum):
     INTERNET: str = "internet"
     DROP: str = "drop"
     TOR: str = "tor"
+    SIM200: str = "sim200"
+    SIM404: str = "sim404"
+    SIMNX: str = "simnx"
 
 
 class SubmissionKinds(Enum):
@@ -27,10 +30,11 @@ class SubmissionKinds(Enum):
 
 
 class SampleKinds(Enum):
-    """The valid kinds of submissions."""
+    """The kinds of samples."""
 
     FILE: str = "file"
     URL: str = "url"
+    FETCH: str = "fetch"
 
 
 class SubmissionStatuses(Enum):
@@ -59,6 +63,32 @@ class ErrorNames(Enum):
     PROFILE_ALREADY_EXISTS: str = "PROFILE_ALREADY_EXISTS"
     PROFILE_NOT_SETTABLE: str = "PROFILE_NOT_SETTABLE"
     REPORT_NOT_AVAILABLE: str = "REPORT_NOT_AVAILABLE"
+    FORBIDDEN: str = "FORBIDDEN"
+    TOO_MANY_REQUESTS: str = "TOO_MANY_REQUESTS"
+
+
+class SampleSubsets(Enum):
+    """The subsets of samples that can be listed with GET /samples."""
+
+    OWNED: str = "owned"
+    PUBLIC: str = "public"
+    ORG: str = "org"
+
+
+class ArchiveFormats(Enum):
+    """The formats a sample's archive (sample, reports, and files) can be downloaded as."""
+
+    TAR: str = "tar"
+    ZIP: str = "zip"
+
+
+class KernelLogs(Enum):
+    """The kernel monitor log name for each platform (``<name>.json`` in a task)."""
+
+    WINDOWS: str = "onemon"
+    LINUX: str = "stahp"
+    MACOS: str = "bigmac"
+    ANDROID: str = "droidy"
 
 
 class ErrorDesc(Enum):
@@ -96,10 +126,13 @@ class ProfileNetworkOptions(Enum):
 
 
 class HashPrefixes(Enum):
+    """The search prefixes of each hash type."""
+
     MD5: str = "md5"
     SHA1: str = "sha1"
     SHA2: str = "sha256"
     SHA5: str = "sha512"
+    SSDEEP: str = "ssdeep"
 
 
 class AvailableTags(Enum):

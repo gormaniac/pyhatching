@@ -34,4 +34,26 @@ class PyHatchingJsonError(PyHatchingRequestError):
 
 
 class PyHatchingApiError(PyHatchingConnError):
-    """The Hatching Triage API returned an error."""
+    """The Hatching Triage API returned an error.
+
+    Attributes
+    ----------
+    status : int | None
+        The HTTP status code of the response, if known.
+    error : str | None
+        The API's error name (ex. ``NOT_FOUND``), see ``enums.ErrorNames``.
+    message : str | None
+        The API's description of the error.
+    """
+
+    def __init__(
+        self,
+        mesg: str,
+        status: int | None = None,
+        error: str | None = None,
+        message: str | None = None,
+    ) -> None:
+        super().__init__(mesg)
+        self.status = status
+        self.error = error
+        self.message = message
