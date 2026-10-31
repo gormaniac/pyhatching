@@ -297,6 +297,8 @@ async def test_reports(client, fake):
     assert fake.last()["path"] == f"/api/v0/samples/{ft.SAMPLE_ID}/behavioral1/logs/onemon.json"
     events = [e async for e in client.kernel_report(ft.SAMPLE_ID, "behavioral1", log="onemon")]
     assert len(events) == 2
+    events = [e async for e in client.kernel_report(ft.SAMPLE_SHA256, "behavioral1")]
+    assert events == ft.KERNEL_EVENTS
     with pytest.raises(errors.PyHatchingValueError):
         async for _ in client.kernel_report(ft.SAMPLE_ID, "behavioral7"):
             pass
@@ -315,6 +317,15 @@ async def test_files(client, rclient, fake):
 
     chunks = [c async for c in client.iter_sample(ft.SAMPLE_ID, chunk_size=4)]
     assert b"".join(chunks) == ft.SAMPLE_BYTES
+    # The streaming downloads resolve hashes too.
+    chunks = [c async for c in client.iter_sample(ft.SAMPLE_SHA256)]
+    assert b"".join(chunks) == ft.SAMPLE_BYTES
+    chunks = [c async for c in client.iter_task_file(ft.SAMPLE_MD5, "behavioral1", "dump.pcap")]
+    assert b"".join(chunks) == ft.PCAP_BYTES
+    with pytest.raises(errors.PyHatchingApiError) as exc:
+        async for _ in client.iter_sample_archive("a" * 64):
+            pass
+    assert exc.value.error == "NOT_FOUND"
 
     assert await client.task_pcap(ft.SAMPLE_ID, "behavioral1") == ft.PCAP_BYTES
     assert fake.last()["path"].endswith("/behavioral1/dump.pcap")

@@ -579,6 +579,19 @@ class PyHatchingClient:  # pylint: disable=R0904
             sample_id = sample
         return sample_id
 
+    async def _stream_sample(self, sample: str) -> str:
+        """``norm_sample`` for generators, which raise when a hash has no sample."""
+
+        sample_id = await self.norm_sample(sample)
+        if sample_id is None:
+            raise errors.PyHatchingApiError(
+                f"Hatching Triage has no sample for {sample}",
+                status=404,
+                error=enums.ErrorNames.NOT_FOUND.value,
+                message=f"No sample for {sample}",
+            )
+        return sample_id
+
     async def sample_id(self, file_hash: str) -> str | None:
         """Find the ID of a sample by the given hash, uses ``search`` under the hood.
 
@@ -996,6 +1009,7 @@ class PyHatchingClient:  # pylint: disable=R0904
             pick the log for the task's platform.
         """
 
+        sample = await self._stream_sample(sample)
         task = self._task(sample, task)
         if log is None:
             report = await self.overview(sample)
@@ -1046,6 +1060,7 @@ class PyHatchingClient:  # pylint: disable=R0904
     async def iter_sample(self, sample: str, chunk_size: int = CHUNK_SIZE) -> AsyncIterator[bytes]:
         """Download a sample in chunks."""
 
+        sample = await self._stream_sample(sample)
         async for chunk in self._iter_bytes(f"/v0/samples/{_seg(sample)}/sample", chunk_size):
             yield chunk
 
@@ -1068,6 +1083,7 @@ class PyHatchingClient:  # pylint: disable=R0904
     ) -> AsyncIterator[bytes]:
         """Download a file from a task in chunks, see ``task_file``."""
 
+        sample = await self._stream_sample(sample)
         async for chunk in self._iter_bytes(self._file_uri(sample, task, filename), chunk_size):
             yield chunk
 
@@ -1102,6 +1118,7 @@ class PyHatchingClient:  # pylint: disable=R0904
     ) -> AsyncIterator[bytes]:
         """Download an archive of a sample in chunks, see ``sample_archive``."""
 
+        sample = await self._stream_sample(sample)
         async for chunk in self._iter_bytes(self._archive_uri(sample, fmt), chunk_size):
             yield chunk
 
