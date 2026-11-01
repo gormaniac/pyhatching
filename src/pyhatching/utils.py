@@ -5,22 +5,23 @@ import re
 from . import enums
 
 
-MD5RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{32}")
-SHA1RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{40}")
-SHA2RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{64}")
-SHA5RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{128}")
+MD5RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{32}$")
+SHA1RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{40}$")
+SHA2RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{64}$")
+SHA5RE: re.Pattern = re.compile(r"^[a-fA-F0-9]{128}$")
+SSDEEPRE: re.Pattern = re.compile(r"^\d+:[a-zA-Z0-9/+]+:[a-zA-Z0-9/+]+$")
 
 HASHRE: re.Pattern = re.compile(
-    r"^[a-fA-F0-9]{128}|^[a-fA-F0-9]{64}|^[a-fA-F0-9]{40}|^[a-fA-F0-9]{32}"
+    r"^(?:[a-fA-F0-9]{128}|[a-fA-F0-9]{64}|[a-fA-F0-9]{40}|[a-fA-F0-9]{32})$"
 )
 
 
 def is_hash(input_hash: str) -> bool:
     """
-    True if input_hash is one of the following hash types: md5, sha1, sha256, sha512
+    True if input_hash is one of the following hash types: md5, sha1, sha256, sha512, ssdeep
     """
 
-    if HASHRE.search(input_hash):
+    if HASHRE.search(input_hash) or SSDEEPRE.search(input_hash):
         return True
     return False
 
@@ -28,12 +29,12 @@ def is_hash(input_hash: str) -> bool:
 def hash_type(input_hash: str) -> enums.HashPrefixes | None:
     """Determine the type of a given hash.
 
-    Supports: md5, sha1, sha256, sha512
+    Supports: md5, sha1, sha256, sha512, ssdeep
 
     Parameters
     ----------
     input_hash : str
-        A hash of one of the following types: md5, sha1, sha256, sha512
+        A hash of one of the following types: md5, sha1, sha256, sha512, ssdeep
 
     Returns
     -------
@@ -49,5 +50,7 @@ def hash_type(input_hash: str) -> enums.HashPrefixes | None:
         return enums.HashPrefixes.SHA1.value
     if MD5RE.search(input_hash):
         return enums.HashPrefixes.MD5.value
+    if SSDEEPRE.search(input_hash):
+        return enums.HashPrefixes.SSDEEP.value
 
     return None

@@ -24,6 +24,9 @@ jobs:
       - name: Set up project environment
         run: make setup
 
+      - name: Run tests
+        run: pipenv run pip install --editable . && pipenv run python3 -m pytest
+
       - name: Build package
         run: make build
 

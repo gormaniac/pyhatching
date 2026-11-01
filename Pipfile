@@ -4,12 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pydantic = "*"
-aiohttp = "*"
+pydantic = ">=2.5,<3"
+aiohttp = ">=3.9,<4"
 python-dateutil = "*"
 certifi = ">=2023.7.22"
 
 [dev-packages]
+pytest = "*"
+pytest-asyncio = "*"
 black = "*"
 setuptools = "*"
 build = "*"
