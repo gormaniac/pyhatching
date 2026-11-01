@@ -1,5 +1,9 @@
 ## Unreleased
 ### Features
+### Fixes
+
+## v1.0.0 - 2026-11-01
+### Features
 - Support the full Hatching Triage API (public, private, and self-hosted instances).
 - Add `pyhatching.testing.FakeTriage`, a fake Triage API server for testing code built on pyhatching.
 - Add a live test suite that runs against tria.ge when `HATCHING_TOKEN` is set.
@@ -8,3 +12,4 @@
 - Add `make tests` to run the test suite.
 ### Fixes
 - Resolve hashes in the streaming downloads and `kernel_report`.
+
