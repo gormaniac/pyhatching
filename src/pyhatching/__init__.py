@@ -1,9 +1,10 @@
 """Async client to interact with the Hatching Triage Sandbox.
 
 Supports the whole Hatching Triage API: sample submission, listing, searching,
-deletion, and events; every report (overview, static, task, summary, and kernel
-logs); sample, task file, pcap, and archive downloads; analysis profiles; Yara
-rules; and (private instance) user and API key management.
+deletion, and events; every report (overview, static, task, summary, UrlScan, and
+kernel logs); sample, task file, pcap, screenshot, and archive downloads; analysis
+profiles; Yara rules; resources, geolocations, and usage statistics; magic links;
+and (private instance) user, API key, and organization management.
 
 All client calls return objects (see `pyhatching.base`) instead of dicts,
 unless bytes makes more sense for the endpoint (samples, pcaps). Streaming
@@ -993,6 +994,60 @@ class PyHatchingClient:  # pylint: disable=R0904
 
         return await self._model(base.SampleSummary, "get", f"/v0/samples/{_seg(sample_id)}/summary")
 
+    async def urlscan_report(
+        self, sample: str, task: str = "urlscan1"
+    ) -> dict | base.ErrorResponse | None:
+        """Return a task's UrlScan report (GET /v0/samples/{id}/{task}/report_urlscan.json).
+
+        URL samples only. The report is returned as a dict because Hatching documents
+        its structure as externally managed and subject to change.
+        """
+
+        sample_id = await self.norm_sample(sample)
+        if sample_id is None:
+            return None
+
+        task = self._task(sample_id, task)
+        resp, resp_dict = await self._request(
+            "get", f"/v0/samples/{_seg(sample_id)}/{_seg(task)}/report_urlscan.json"
+        )
+        if isinstance(resp_dict, dict) and "error" in resp_dict and resp.status >= 400:
+            return self.convert_resp(base.ErrorResponse, resp, resp_dict)
+        return resp_dict
+
+    async def magic_token(self, sample: str) -> str | base.ErrorResponse | None:
+        """Return a sample's magic link token (GET /v0/samples/{id}/magic).
+
+        The token builds a shareable link: ``{url}/{sample_id}/magic/{token}``.
+        Magic links must be enabled for your organization, see ``set_magic_link``.
+        """
+
+        sample_id = await self.norm_sample(sample)
+        if sample_id is None:
+            return None
+
+        resp, _ = await self._request("get", f"/v0/samples/{_seg(sample_id)}/magic", raw=True)
+        if resp.status >= 400:
+            err = await self._raw_error(resp)
+            if self.raise_on_api_err:
+                raise api_error(err)
+            return err
+        try:
+            text = await resp.text()
+        except (aiohttp.ClientError, TimeoutError) as exc:
+            raise errors.PyHatchingRequestError(
+                f"Error reading the magic token from Hatching Triage: {exc}"
+            ) from exc
+        finally:
+            resp.release()
+        try:
+            obj = jsonlib.loads(text)
+        except ValueError:
+            obj = text
+        if isinstance(obj, dict):
+            return obj.get("token") or obj.get("magic_token") or obj.get("magic")
+        return str(obj).strip() or None
+
     async def kernel_report(
         self, sample: str, task: str, log: enums.KernelLogs | str | None = None
     ) -> AsyncIterator[dict]:
@@ -1092,6 +1147,14 @@ class PyHatchingClient:  # pylint: disable=R0904
 
         return await self.task_file(sample, task, "dump.pcapng" if pcapng else "dump.pcap")
 
+    async def task_screenshot(self, sample: str, task: str = "urlscan1") -> bytes | None:
+        """Download a task's screenshot (GET /v0/samples/{id}/{task}/screenshot.png).
+
+        URL samples only.
+        """
+
+        return await self.task_file(sample, task, "screenshot.png")
+
     def _archive_uri(self, sample_id: str, fmt: enums.ArchiveFormats | str) -> str:
         fmt = _value(fmt)
         if fmt not in ("tar", "zip"):
@@ -1121,6 +1184,50 @@ class PyHatchingClient:  # pylint: disable=R0904
         sample = await self._stream_sample(sample)
         async for chunk in self._iter_bytes(self._archive_uri(sample, fmt), chunk_size):
             yield chunk
+
+    # ---- Resources, geolocations, and stats ----
+
+    async def get_resources(self) -> list[base.ResourceGroup] | base.ErrorResponse:
+        """List the available analysis environments (GET /v0/resources).
+
+        A resource is an analysis environment for a specific OS, language, and
+        other specifics. Its ``tags`` can be used in profiles and submissions.
+        """
+
+        return await self._model(base.ResourceGroup, "get", "/v0/resources")
+
+    async def get_geolocations(self) -> list[base.GeolocationGroup] | base.ErrorResponse:
+        """List the regions VPN-routed analyses can exit from (GET /v0/geolocations)."""
+
+        return await self._model(base.GeolocationGroup, "get", "/v0/geolocations")
+
+    async def user_stats(self) -> base.UsageStats | base.ErrorResponse:
+        """Return your usage statistics (GET /v0/stats/user)."""
+
+        return await self._model(base.UsageStats, "get", "/v0/stats/user")
+
+    async def org_stats(self) -> base.UsageStats | base.ErrorResponse:
+        """Return your organization's usage statistics (GET /v0/stats/org)."""
+
+        return await self._model(base.UsageStats, "get", "/v0/stats/org")
+
+    # ---- Organization settings ----
+
+    async def get_org_settings(self) -> base.OrgSettings | base.ErrorResponse:
+        """Return your organization's settings (GET /v0/org/settings).
+
+        Requires the ``manage_company`` permission.
+        """
+
+        return await self._model(base.OrgSettings, "get", "/v0/org/settings")
+
+    async def set_magic_link(self, enabled: bool) -> None | base.ErrorResponse:
+        """Enable or disable magic link creation (PUT /v0/org/settings/magic).
+
+        Requires the ``manage_company`` permission. See ``magic_token``.
+        """
+
+        return await self._empty("put", "/v0/org/settings/magic", json={"enabled": enabled})
 
     # ---- Profiles ----
 
@@ -1172,6 +1279,7 @@ class PyHatchingClient:  # pylint: disable=R0904
         tags: list[str],
         timeout: int | None = None,
         network: enums.ProfileNetworkOptions | str | None = None,
+        geolocation: str | None = None,
     ) -> base.HatchingProfileResponse | base.ErrorResponse:
         """Add a new sandbox analysis profile to your account.
 
@@ -1185,6 +1293,9 @@ class PyHatchingClient:  # pylint: disable=R0904
             The profiles timeout length in seconds.
         network : enums.ProfileNetworkOptions
             The network option for this analysis profile.
+        geolocation : str
+            The VPN region to exit from (see ``get_geolocations``), requires
+            ``network`` to be ``vpn``.
 
         Returns
         -------
@@ -1192,7 +1303,8 @@ class PyHatchingClient:  # pylint: disable=R0904
             The new profile, or the error.
         """
 
-        data = {"name": name, "tags": list(tags or []), "timeout": timeout, "network": _value(network)}
+        data = {"name": name, "tags": list(tags or []), "timeout": timeout,
+                "network": _value(network), "geolocation": geolocation}
         data = {k: v for k, v in data.items() if v is not None}
 
         resp, resp_dict = await self._request("post", "/v0/profiles", json=data)
@@ -1208,10 +1320,12 @@ class PyHatchingClient:  # pylint: disable=R0904
         network: enums.ProfileNetworkOptions | str,
         name: str,
         profile_id: str,
+        geolocation: str | None = None,
     ) -> None | base.ErrorResponse:
         """Update the given profile (PUT /v0/profiles/{id}).
 
-        See `profile docs`_ for how this endpoint behaves, all args are required.
+        See `profile docs`_ for how this endpoint behaves, the stored profile is
+        overwritten so all args (except ``geolocation``) are required.
 
         Parameters
         ----------
@@ -1225,6 +1339,8 @@ class PyHatchingClient:  # pylint: disable=R0904
             The (new) name of the profile.
         profile_id : str
             The ID or current name of the profile to update.
+        geolocation : str, optional
+            The VPN region to exit from, requires ``network`` to be ``vpn``.
 
         Returns
         -------
@@ -1234,7 +1350,8 @@ class PyHatchingClient:  # pylint: disable=R0904
         .. _profile docs: https://tria.ge/docs/cloud-api/profiles/
         """
 
-        data = {"name": name, "tags": list(tags or []), "timeout": timeout, "network": _value(network)}
+        data = {"name": name, "tags": list(tags or []), "timeout": timeout,
+                "network": _value(network), "geolocation": geolocation}
 
         return await self._empty(
             "put",
@@ -1347,21 +1464,35 @@ class PyHatchingClient:  # pylint: disable=R0904
 
     async def create_user(  # pylint: disable=R0913
         self,
-        username: str,
-        email: str,
+        username: str | None = None,
+        email: str | None = None,
         password: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
         permissions: list[str] | None = None,
+        name: str | None = None,
+        role: str | None = None,
+        email_confirmed: bool | None = None,
     ) -> base.User | base.ErrorResponse:
-        """Create a user in your company (requires admin permissions)."""
+        """Create a user in your company (requires the manage_company permission).
+
+        The API takes either a ``username`` (which can't contain ``@``) or an
+        ``email``, not both. ``first_name`` and ``last_name`` are deprecated by
+        the API in favor of ``name``.
+        """
+
+        if not username and not email:
+            raise errors.PyHatchingValueError("A username or email is required.")
 
         data = {
             "username": username,
             "email": email,
+            "email_confirmed": email_confirmed,
             "password": password,
+            "name": name,
             "first_name": first_name,
             "last_name": last_name,
+            "role": role,
             "permissions": permissions,
         }
         return await self._model(

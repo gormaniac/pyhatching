@@ -221,6 +221,27 @@ async def test_submit_url(client, fake):
     with pytest.raises(errors.PyHatchingValueError):
         await client.submit_sample(base.SubmissionRequest(kind="url"))
 
+    # Imports (private instances) pull in a public sample by URL or ID.
+    sample = await client.submit_sample(
+        base.SubmissionRequest(kind="import", url=f"https://tria.ge/{ft.SAMPLE_ID}")
+    )
+    assert sample.kind == enums.SampleKinds.FILE and sample.filename == ft.SAMPLE_ID
+    assert fake.last("post", "/samples")["json"]["kind"] == "import"
+    with pytest.raises(errors.PyHatchingValueError):
+        await client.submit_sample(base.SubmissionRequest(kind="import"))
+
+
+async def test_submit_defaults_geolocation(client, fake):
+    req = base.SubmissionRequest(
+        kind="url",
+        url="http://example.com",
+        defaults={"timeout": 60, "network": "vpn", "geolocation": "us"},
+    )
+    await client.submit_sample(req)
+    assert fake.last("post", "/samples")["json"]["defaults"] == {
+        "timeout": 60, "network": "vpn", "geolocation": "us",
+    }
+
 
 async def test_set_profile_and_delete(client, rclient, fake):
     sample = await client.submit_sample(
@@ -361,6 +382,12 @@ async def test_profiles(client, fake):
     assert new.name == "new" and new.id
     assert fake.last()["json"] == {"name": "new", "tags": ["windows7"], "timeout": 60,
                                    "network": "drop"}
+
+    vpn = await client.submit_profile("vpn-us", ["windows10"], 60, "vpn", geolocation="us")
+    assert vpn.geolocation == "us"
+    assert fake.last()["json"] == {"name": "vpn-us", "tags": ["windows10"], "timeout": 60,
+                                   "network": "vpn", "geolocation": "us"}
+    assert await client.delete_profile("vpn-us") is None
     err = await client.submit_profile("new", [])
     assert err.error == "PROFILE_ALREADY_EXISTS"
 
@@ -400,6 +427,14 @@ async def test_users(client, fake):
     assert fake.last()["json"] == {"username": "bob", "email": "bob@example.com",
                                    "password": "pw", "permissions": ["admin"]}
 
+    named = await client.create_user(email="eve@example.com", name="Eve", role="admin",
+                                     email_confirmed=True)
+    assert named.name == "Eve" and named.role == "admin"
+    assert fake.last()["json"] == {"email": "eve@example.com", "email_confirmed": True,
+                                   "name": "Eve", "role": "admin"}
+    with pytest.raises(errors.PyHatchingValueError):
+        await client.create_user()
+
     key = await client.create_user_apikey(new.id, "ci")
     assert key.name == "ci" and key.key
     keys = await client.get_user_apikeys(new.id)
@@ -409,6 +444,67 @@ async def test_users(client, fake):
 
     assert await client.delete_user(new.id) is None
     assert (await client.get_user(new.id)).error == "NOT_FOUND"
+
+
+async def test_urlscan(client, fake):
+    report = await client.urlscan_report(ft.SAMPLE_ID)
+    assert report["url"] == "http://evil.example.com/login"
+    assert fake.last()["path"] == f"/api/v0/samples/{ft.SAMPLE_ID}/urlscan1/report_urlscan.json"
+    # Hash and full task IDs resolve too.
+    report = await client.urlscan_report(ft.SAMPLE_SHA256, f"{ft.SAMPLE_ID}-urlscan1")
+    assert report["verdict"]["score"] == 10
+    err = await client.urlscan_report(ft.SAMPLE_ID, "urlscan9")
+    assert isinstance(err, base.ErrorResponse) and err.error == "REPORT_NOT_AVAILABLE"
+
+    assert await client.task_screenshot(ft.SAMPLE_ID) == ft.SCREENSHOT_BYTES
+    assert fake.last()["path"].endswith("/urlscan1/screenshot.png")
+
+
+async def test_magic_token(client, rclient, fake):
+    token = await client.magic_token(ft.SAMPLE_ID)
+    assert token == ft.MAGIC_TOKEN
+    assert fake.last()["path"] == f"/api/v0/samples/{ft.SAMPLE_ID}/magic"
+    assert await client.magic_token(ft.SAMPLE_SHA256) == ft.MAGIC_TOKEN
+    assert await client.magic_token("a" * 64) is None
+
+    err = await client.magic_token("nope")
+    assert isinstance(err, base.ErrorResponse) and err.error == "NOT_FOUND"
+    fake.org_settings["magic_link"]["enabled"] = False
+    err = await client.magic_token(ft.SAMPLE_ID)
+    assert isinstance(err, base.ErrorResponse) and err.error == "FORBIDDEN"
+    with pytest.raises(errors.PyHatchingApiError):
+        await rclient.magic_token(ft.SAMPLE_ID)
+
+
+async def test_resources_and_geolocations(client, fake):
+    groups = await client.get_resources()
+    assert groups[0].resources[0].name == "win10v2004-20260901-en"
+    assert "os:windows10-2004-x64" in groups[0].resources[0].tags
+    assert fake.last()["path"] == "/api/v0/resources"
+
+    geos = await client.get_geolocations()
+    assert [g.name for g in geos[0].geolocations] == ["us", "de"]
+    assert fake.last()["path"] == "/api/v0/geolocations"
+
+
+async def test_stats(client, fake):
+    stats = await client.user_stats()
+    assert stats.samples_submitted == 1
+    assert fake.last()["path"] == "/api/v0/stats/user"
+    stats = await client.org_stats()
+    assert stats.samples_submitted == 1
+    assert fake.last()["path"] == "/api/v0/stats/org"
+
+
+async def test_org_settings(client, fake):
+    settings = await client.get_org_settings()
+    assert settings.magic_link.enabled is True
+
+    assert await client.set_magic_link(False) is None
+    assert fake.last()["json"] == {"enabled": False}
+    settings = await client.get_org_settings()
+    assert settings.magic_link.enabled is False
+    assert await client.set_magic_link(True) is None
 
 
 async def test_non_json_error(client, fake):

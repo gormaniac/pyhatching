@@ -19,14 +19,19 @@ class SubmssionsRequestNetDefaults(Enum):
     SIM200: str = "sim200"
     SIM404: str = "sim404"
     SIMNX: str = "simnx"
+    VPN: str = "vpn"
 
 
 class SubmissionKinds(Enum):
-    """The valid kinds of submissions."""
+    """The valid kinds of submissions.
+
+    ``import`` imports a public Triage sample (by URL or ID) into a private instance.
+    """
 
     FILE: str = "file"
     URL: str = "url"
     FETCH: str = "fetch"
+    IMPORT: str = "import"
 
 
 class SampleKinds(Enum):
@@ -35,6 +40,7 @@ class SampleKinds(Enum):
     FILE: str = "file"
     URL: str = "url"
     FETCH: str = "fetch"
+    IMPORT: str = "import"
 
 
 class SubmissionStatuses(Enum):
@@ -65,6 +71,9 @@ class ErrorNames(Enum):
     REPORT_NOT_AVAILABLE: str = "REPORT_NOT_AVAILABLE"
     FORBIDDEN: str = "FORBIDDEN"
     TOO_MANY_REQUESTS: str = "TOO_MANY_REQUESTS"
+    USER_ALREADY_REGISTERED: str = "USER_ALREADY_REGISTERED"
+    DELETE_SELF: str = "DELETE_SELF"
+    MISSING_PERMISSION: str = "MISSING_PERMISSION"
 
 
 class SampleSubsets(Enum):
@@ -114,6 +123,7 @@ class ProfileNetworkOptions(Enum):
     "sim200": InetSim-like functionality with HTTP 200 responses.
     "sim404": InetSim-like functionality with HTTP 404 responses.
     "simnx": InetSim-like functionality with DNS NXDOMAIN responses.
+    "vpn": Route internet through a VPN, set a geolocation to pick the region.
     """
 
     DEFAULT: str = ""
@@ -123,6 +133,7 @@ class ProfileNetworkOptions(Enum):
     SIM200: str = "sim200"
     SIM404: str = "sim404"
     SIMNX: str = "simnx"
+    VPN: str = "vpn"
 
 
 class HashPrefixes(Enum):
@@ -145,11 +156,16 @@ class AvailableTags(Enum):
     BANKER: str = "banker"
     BOOTKIT: str = "bootkit"
     BOTNET: str = "botnet"
+    CLIPPER: str = "clipper"
+    COLLECTION: str = "collection"
+    CRYPTER: str = "crypter"
     DISCOVERY: str = "discovery"
     DOWNLOADER: str = "downloader"
     DROPPER: str = "dropper"
     EVASION: str = "evasion"
     EXPLOIT: str = "exploit"
+    EXPLOITER: str = "exploiter"
+    FAKEAV: str = "fakeav"
     ICS: str = "ics"
     INFOSTEALER: str = "infostealer"
     KEYLOGGER: str = "keylogger"
@@ -161,6 +177,8 @@ class AvailableTags(Enum):
     RANSOMWARE: str = "ransomware"
     RAT: str = "rat"
     ROOTKIT: str = "rootkit"
+    SPAM: str = "spam"
+    SPREADER: str = "spreader"
     SPYWARE: str = "spyware"
     STEALER: str = "stealer"
     TROJAN: str = "trojan"

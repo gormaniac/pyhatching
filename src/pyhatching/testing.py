@@ -461,6 +461,36 @@ YARA_RULE = {
     "warnings": [],
 }
 
+URLSCAN_REPORT = {
+    "version": "0.1.0",
+    "task": f"{SAMPLE_ID}-urlscan1",
+    "url": "http://evil.example.com/login",
+    "effective_url": "https://evil.example.com/login",
+    "requests": [{"url": "https://evil.example.com/login", "status": 200}],
+    "verdict": {"score": 10, "tags": ["phishing"]},
+}
+
+MAGIC_TOKEN = "fakemagictoken1234567890"
+"""The magic link token returned for any seeded sample."""
+
+RESOURCES = [
+    {
+        "resources": [
+            {"name": "win10v2004-20260901-en", "tags": ["os:windows10-2004-x64", "locale:en-us"]},
+            {"name": "ubuntu-2204-amd64", "tags": ["os:ubuntu-22.04-amd64"]},
+        ]
+    }
+]
+
+GEOLOCATIONS = [
+    {
+        "geolocations": [
+            {"name": "us", "tags": ["geo:us"]},
+            {"name": "de", "tags": ["geo:de"]},
+        ]
+    }
+]
+
 USER = {
     "id": "8c2e3f40-5a6b-4c7d-9e8f-0a1b2c3d4e5f",
     "username": "analyst",
@@ -515,7 +545,12 @@ class FakeTriage:
             (SAMPLE_ID, "behavioral1", "logs/onemon.json"): b"".join(
                 json.dumps(e).encode() + b"\n" for e in KERNEL_EVENTS
             ),
+            (SAMPLE_ID, "urlscan1", "screenshot.png"): SCREENSHOT_BYTES,
         }
+        self.urlscans: dict[tuple[str, str], dict] = {
+            (SAMPLE_ID, "urlscan1"): copy.deepcopy(URLSCAN_REPORT)
+        }
+        self.org_settings: dict[str, Any] = {"magic_link": {"enabled": True}}
         self.profiles: dict[str, dict] = {PROFILE["id"]: copy.deepcopy(PROFILE)}
         self.rules: dict[str, dict] = {YARA_RULE["name"]: copy.deepcopy(YARA_RULE)}
         self.users: dict[str, dict] = {USER["id"]: copy.deepcopy(USER)}
@@ -603,10 +638,18 @@ class FakeTriage:
         r.add_get("/api/v0/samples/{sid}/archive", self.archive)
         r.add_get("/api/v0/samples/{sid}/archive.zip", self.archive)
         r.add_get("/api/v0/samples/{sid}/summary", self.summary)
+        r.add_get("/api/v0/samples/{sid}/magic", self.magic)
         r.add_get("/api/v0/samples/{sid}/reports/static", self.staticReport)
         r.add_get("/api/v1/samples/{sid}/overview.json", self.overview)
         r.add_get("/api/v0/samples/{sid}/{task}/report_triage.json", self.taskReport)
+        r.add_get("/api/v0/samples/{sid}/{task}/report_urlscan.json", self.urlscanReport)
         r.add_get("/api/v0/samples/{sid}/{task}/{name:.+}", self.taskFile)
+        r.add_get("/api/v0/resources", self.resources)
+        r.add_get("/api/v0/geolocations", self.geolocations)
+        r.add_get("/api/v0/stats/user", self.stats)
+        r.add_get("/api/v0/stats/org", self.stats)
+        r.add_get("/api/v0/org/settings", self.orgSettings)
+        r.add_put("/api/v0/org/settings/magic", self.setMagicLink)
         r.add_get("/api/v0/profiles", self.listProfiles)
         r.add_post("/api/v0/profiles", self.createProfile)
         r.add_get("/api/v0/profiles/{pid}", self.getProfile)
@@ -683,11 +726,11 @@ class FakeTriage:
             filename, byts = None, None
 
         kind = body.get("kind")
-        if kind not in ("file", "url", "fetch"):
+        if kind not in ("file", "url", "fetch", "import"):
             return _err(400, "INVALID", "Invalid kind.")
         if kind == "file" and not byts:
             return _err(400, "INVALID", "No file was uploaded.")
-        if kind in ("url", "fetch") and not body.get("url"):
+        if kind in ("url", "fetch", "import") and not body.get("url"):
             return _err(400, "INVALID", "No url was given.")
 
         self.counter += 1
@@ -702,6 +745,10 @@ class FakeTriage:
         if kind == "file":
             sample["filename"] = body.get("target") or filename
             self.files[sid] = byts
+        elif kind == "import":
+            # Imported samples are file samples copied from a public analysis.
+            sample["kind"] = "file"
+            sample["filename"] = body["url"].rstrip("/").rsplit("/", 1)[-1]
         else:
             sample["url"] = body["url"]
             if kind == "fetch":
@@ -803,6 +850,37 @@ class FakeTriage:
     async def taskReport(self, request: web.Request) -> web.Response:
         return self._report(self.task_reports, (request.match_info["sid"], request.match_info["task"]))
 
+    async def urlscanReport(self, request: web.Request) -> web.Response:
+        return self._report(self.urlscans, (request.match_info["sid"], request.match_info["task"]))
+
+    async def magic(self, request: web.Request) -> web.Response:
+        if self._sample(request) is None:
+            return self._notfound()
+        if not self.org_settings.get("magic_link", {}).get("enabled"):
+            return _err(403, "FORBIDDEN", "Magic links are disabled.")
+        return web.json_response({"token": MAGIC_TOKEN})
+
+    # ---- Resources, geolocations, stats, and org settings ----
+
+    async def resources(self, request: web.Request) -> web.Response:
+        return web.json_response({"data": RESOURCES})
+
+    async def geolocations(self, request: web.Request) -> web.Response:
+        return web.json_response({"data": GEOLOCATIONS})
+
+    async def stats(self, request: web.Request) -> web.Response:
+        return web.json_response({"samples_submitted": len(self.samples)})
+
+    async def orgSettings(self, request: web.Request) -> web.Response:
+        return web.json_response(self.org_settings)
+
+    async def setMagicLink(self, request: web.Request) -> web.Response:
+        body = request[RECORD]["json"] or {}
+        if not isinstance(body.get("enabled"), bool):
+            return _err(400, "INVALID", "enabled must be a boolean.")
+        self.org_settings["magic_link"] = {"enabled": body["enabled"]}
+        return web.json_response({})
+
     async def taskFile(self, request: web.Request) -> web.Response:
         key = (request.match_info["sid"], request.match_info["task"], request.match_info["name"])
         byts = self.task_files.get(key)
@@ -834,6 +912,8 @@ class FakeTriage:
         profile = {"id": f"profile-{self.counter}", "name": body["name"],
                    "tags": body.get("tags") or [], "network": body.get("network", ""),
                    "timeout": body.get("timeout", 150)}
+        if body.get("geolocation"):
+            profile["geolocation"] = body["geolocation"]
         self.profiles[profile["id"]] = profile
         return web.json_response(profile)
 
@@ -848,7 +928,8 @@ class FakeTriage:
         if profile is None:
             return self._notfound("profile")
         body = request[RECORD]["json"] or {}
-        profile.update({k: v for k, v in body.items() if k in ("name", "tags", "network", "timeout")})
+        profile.update({k: v for k, v in body.items()
+                        if k in ("name", "tags", "network", "timeout", "geolocation")})
         return web.json_response({})
 
     async def deleteProfile(self, request: web.Request) -> web.Response:
@@ -901,8 +982,8 @@ class FakeTriage:
 
     async def createUser(self, request: web.Request) -> web.Response:
         body = request[RECORD]["json"] or {}
-        if not body.get("username") or not body.get("email"):
-            return _err(400, "INVALID", "A username and email are required.")
+        if not body.get("username") and not body.get("email"):
+            return _err(400, "INVALID", "A username or email is required.")
         self.counter += 1
         user = {"id": f"user-{self.counter}", "created_at": SUBMITTED, "company_id": "company-1"}
         user.update({k: v for k, v in body.items() if k != "password"})

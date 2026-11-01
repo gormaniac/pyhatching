@@ -109,12 +109,16 @@ class YaraRules(HatchingResponse):
 
 
 class HatchingProfile(TriageModel):
-    """A Hatching Triage Sandbox analysis profile."""
+    """A Hatching Triage Sandbox analysis profile.
+
+    ``geolocation`` picks the VPN region and requires ``network`` to be ``vpn``.
+    """
 
     name: str
     network: enums.ProfileNetworkOptions | str = Field(default="", union_mode="left_to_right")
     timeout: Optional[int] = None
     tags: list[str] = Field(default_factory=list)
+    geolocation: Optional[str] = None
 
 
 class HatchingProfileResponse(HatchingProfile, HatchingResponse):
@@ -124,15 +128,21 @@ class HatchingProfileResponse(HatchingProfile, HatchingResponse):
 
 
 class User(HatchingResponse):
-    """A user of a (private) Hatching Triage instance."""
+    """A user of a (private) Hatching Triage instance.
+
+    ``first_name`` and ``last_name`` are deprecated by the API in favor of ``name``.
+    """
 
     id: str
     username: Optional[str] = None
+    name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[str] = None
+    email_confirmed_at: Optional[datetime.datetime] = None
     created_at: Optional[datetime.datetime] = None
     company_id: Optional[str] = None
+    role: Optional[str] = None
     permissions: Optional[list[str]] = None
 
 
@@ -143,17 +153,65 @@ class ApiKey(HatchingResponse):
     key: Optional[str] = None
 
 
+class Resource(TriageModel):
+    """An analysis environment (VM) for a specific OS, language, and other specifics."""
+
+    name: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class ResourceGroup(HatchingResponse):
+    """A group of analysis environments, from GET /resources."""
+
+    resources: list[Resource] = Field(default_factory=list)
+
+
+class Geolocation(TriageModel):
+    """A region VPN-routed analyses can exit from."""
+
+    name: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class GeolocationGroup(HatchingResponse):
+    """A group of VPN geolocations, from GET /geolocations."""
+
+    geolocations: list[Geolocation] = Field(default_factory=list)
+
+
+class UsageStats(HatchingResponse):
+    """Usage statistics (GET /stats/user and GET /stats/org)."""
+
+    samples_submitted: Optional[int] = None
+
+
+class MagicLinkSettings(TriageModel):
+    """The magic link settings of an organization."""
+
+    enabled: Optional[bool] = None
+
+
+class OrgSettings(HatchingResponse):
+    """Organization settings (GET /org/settings), requires the manage_company permission."""
+
+    magic_link: Optional[MagicLinkSettings] = None
+
+
 class HatchingRequest(TriageModel):
     """A request model sent to the Hatching Triage API."""
 
 
 class SubmissionRequestDefaults(TriageModel):
-    """Default sandbox paramaters for SubmissionRequest."""
+    """Default sandbox paramaters for SubmissionRequest.
+
+    ``geolocation`` picks the VPN region and requires ``network`` to be ``vpn``.
+    """
 
     timeout: Optional[int] = None
     network: enums.SubmssionsRequestNetDefaults | str | None = Field(
         default=None, union_mode="left_to_right"
     )
+    geolocation: Optional[str] = None
 
 
 class HatchingProfileSubmission(TriageModel):
@@ -172,10 +230,13 @@ class SubmissionRequest(HatchingRequest):
     Parameters
     ----------
     kind
-        ``file`` to upload a file, ``url`` to analyze a URL in a browser, or ``fetch``
-        to have the sandbox download a file from ``url`` and analyze that.
+        ``file`` to upload a file, ``url`` to analyze a URL in a browser, ``fetch``
+        to have the sandbox download a file from ``url`` and analyze that, or
+        ``import`` to import a public Triage sample (its URL or ID in ``url``)
+        into a private instance.
     url
-        The URL to analyze or fetch, required for the ``url`` and ``fetch`` kinds.
+        The URL to analyze, fetch, or import - required for the ``url``, ``fetch``,
+        and ``import`` kinds.
     target
         The filename to give the sample, defaults to the uploaded file's name.
     interactive
