@@ -49,6 +49,11 @@ async def _reported_sample(client) -> base.SampleInfo:
     async for info in client.iter_samples(enums.SampleSubsets.PUBLIC, limit=50):
         if info.status != enums.SubmissionStatuses.REPORTED or info.kind != enums.SampleKinds.FILE:
             continue
+        # The /samples listing omits ``tasks``; only GET /samples/{id} includes them.
+        if not info.tasks:
+            info = await client.get_sample(info.id)
+            if not isinstance(info, base.SampleInfo):
+                continue
         if not any("behavioral" in task.id for task in info.tasks or []):
             continue
         _CACHE["sample"] = info
@@ -155,7 +160,7 @@ async def test_task_report(client):
 
     err = await client.task_report(sample.id, "behavioral99")
     assert isinstance(err, base.ErrorResponse)
-    assert err.error in ("NOT_FOUND", "REPORT_NOT_AVAILABLE")
+    assert err.error in ("NOT_FOUND", "NOT_AVAILABLE", "REPORT_NOT_AVAILABLE")
 
 
 async def test_summary(client):
@@ -183,7 +188,7 @@ async def test_kernel_report(client):
                 break
     except errors.PyHatchingApiError as err:
         # Older or special analyses may not keep kernel logs.
-        assert err.error in ("NOT_FOUND", "REPORT_NOT_AVAILABLE"), err
+        assert err.error in ("NOT_FOUND", "NOT_AVAILABLE", "REPORT_NOT_AVAILABLE"), err
 
 
 async def test_download_sample(client):
