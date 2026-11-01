@@ -50,7 +50,8 @@ read-docs: # Open the package docs locally
 
 .PHONY: release
 release: change-version clean setup build docs # Build a new versioned release and push it (requires VERSION=#.#.#)
-	git add doc/* pyproject.toml $(PKG_DIR)/__init__.py
+	python3 scripts/changelog.py release $(VERSION) || echo "WARNING: no CHANGELOG entries for v$(VERSION)"
+	git add doc/* pyproject.toml $(PKG_DIR)/__init__.py CHANGELOG.md
 	git commit -m "build: release v$(VERSION)"
 	git push
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
@@ -60,3 +61,7 @@ release: change-version clean setup build docs # Build a new versioned release a
 .PHONY: pypi
 pypi: # Upload all Python packages in "dist/" to PyPI.
 	pipenv run python3 -m twine upload dist/*
+
+.PHONY: tests
+tests: # Run the pytest suite for this project.
+	pipenv run pytest tests/
