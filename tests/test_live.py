@@ -8,8 +8,9 @@ They are read-only by default: they list and search public samples, pull every
 report for a recent reported sample, and download (in memory only) small files.
 Set ``HATCHING_LIVE_WRITE=1`` to also exercise the Yara and profile write
 endpoints (objects named ``pyhatching-livetest-*`` are created and deleted).
-Set ``HATCHING_LIVE_SUBMIT=1`` to also submit a (benign) URL sample - on the
-public cloud submissions are public and can't be deleted, so this is opt-in.
+Set ``HATCHING_LIVE_SUBMIT=1`` to also resubmit a public sample the sandbox
+flagged (score above 1) - on the public cloud submissions are public and can't be
+deleted, so this is opt-in.
 """
 
 import hashlib
@@ -301,15 +302,43 @@ async def test_profile_writes(client):
 
 
 @pytest.mark.skipif(not LIVE_SUBMIT, reason="HATCHING_LIVE_SUBMIT is not set to 1")
-async def test_submit_url_sample(client):
-    """Submit a benign URL - public on tria.ge and NOT deletable, so opt-in."""
+async def test_resubmit_flagged_sample(client):
+    """Download a public sample the sandbox flagged (score > 1) and resubmit it.
+
+    Submissions are public on tria.ge and NOT deletable, so this is opt-in. The
+    sample is only ever held in memory.
+    """
+
+    picked = None
+    async for info in client.iter_samples(enums.SampleSubsets.PUBLIC, limit=100):
+        if info.status != enums.SubmissionStatuses.REPORTED or info.kind != enums.SampleKinds.FILE:
+            continue
+        summary = await client.sample_summary(info.id)
+        # Triage scores 1 (no threat detected, i.e. clean) to 10 (known bad).
+        if not isinstance(summary, base.SampleSummary) or (summary.score or 0) <= 1:
+            continue
+        if not summary.sha256:
+            continue
+        data = await client.download_sample(info.id)
+        if not data or len(data) > MAX_DOWNLOAD:
+            continue
+        picked = (info, summary, data)
+        break
+
+    if picked is None:
+        pytest.skip("No recent reported, flagged public file sample was found.")
+    info, summary, data = picked
+    assert hashlib.sha256(data).hexdigest() == summary.sha256
 
     req = base.SubmissionRequest(
-        kind="url", url="http://example.com", user_tags=["pyhatching-livetest"]
+        kind="file",
+        target=info.filename or summary.target or summary.sha256,
+        user_tags=["pyhatching-livetest"],
     )
-    sample = await client.submit_sample(req)
+    sample = await client.submit_sample(req, data)
     assert isinstance(sample, base.SamplesResponse), f"submission failed: {sample}"
-    assert sample.id and sample.kind == enums.SampleKinds.URL
+    assert sample.id and sample.id != info.id
+    assert sample.kind == enums.SampleKinds.FILE
 
     # The events stream reports the sample's current status on connect.
     async for event in client.sample_events(sample.id):
