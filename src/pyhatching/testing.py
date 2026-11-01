@@ -291,6 +291,8 @@ TASK_REPORT = {
         "resource": "win10v2004-20260901-en",
         "platform": "windows10-2004_x64",
     },
+    # Like the live API, orig is set on every process in the sample's process tree, not
+    # only on the process that ran the sample.
     "processes": [
         {
             "procid": 1,
@@ -309,7 +311,7 @@ TASK_REPORT = {
             "ppid": 2044,
             "cmd": ["C:\\Windows\\System32\\cmd.exe", "/c", "whoami"],
             "image": "C:\\Windows\\System32\\cmd.exe",
-            "orig": False,
+            "orig": True,
             "started": 3400,
             "terminated": 3900,
         },
@@ -349,7 +351,8 @@ TASK_REPORT = {
                 "at": 4900,
                 "dns_request": {
                     "domains": ["evil.example.com"],
-                    "questions": [{"name": "evil.example.com", "type": "A"}],
+                    # Like the live API, record types include the class ("IN A").
+                    "questions": [{"name": "evil.example.com", "type": "IN A"}],
                 },
             },
             {
@@ -359,7 +362,7 @@ TASK_REPORT = {
                 "dns_response": {
                     "domains": ["evil.example.com"],
                     "ip": ["198.51.100.7"],
-                    "answers": [{"name": "evil.example.com", "type": "A", "value": "198.51.100.7"}],
+                    "answers": [{"name": "evil.example.com", "type": "IN A", "value": "198.51.100.7"}],
                 },
             },
             {

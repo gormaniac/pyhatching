@@ -597,6 +597,8 @@ class Process(TriageModel):
     ppid: Optional[int] = None
     cmd: Any = None
     image: Optional[str] = None
+    # Whether the process is in the sample's process tree. It's set on the sample's children
+    # too, and sometimes on none of the processes, so it doesn't find the process that ran it.
     orig: Optional[bool] = None
     started: Optional[int] = None
     terminated: Optional[int] = None
@@ -628,6 +630,7 @@ class DNSEntry(TriageModel):
     """A DNS question or answer."""
 
     name: Optional[str] = None
+    # The record class and type, ex. "IN A" or "IN CNAME".
     type: Optional[str] = None
     value: Optional[str] = None
 
