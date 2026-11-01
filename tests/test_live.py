@@ -8,9 +8,9 @@ They are read-only by default: they list and search public samples, pull every
 report for a recent reported sample, and download (in memory only) small files.
 Set ``HATCHING_LIVE_WRITE=1`` to also exercise the Yara and profile write
 endpoints (objects named ``pyhatching-livetest-*`` are created and deleted).
-Set ``HATCHING_LIVE_SUBMIT=1`` to also resubmit a public sample the sandbox
-flagged (score above 1) - on the public cloud submissions are public and can't be
-deleted, so this is opt-in.
+Set ``HATCHING_LIVE_SUBMIT=1`` to also resubmit ``SUBMIT_SHA256``, an already
+public sample Triage scores 10/10 - on the public cloud submissions are public and
+can't be deleted, so this is opt-in.
 """
 
 import hashlib
@@ -28,6 +28,9 @@ LIVE_SUBMIT = os.environ.get("HATCHING_LIVE_SUBMIT") == "1"
 
 MAX_DOWNLOAD = 20 * 1024 * 1024
 """Don't download samples bigger than this in the download tests."""
+
+SUBMIT_SHA256 = "59f22c3963db921d3d7792c2980b1c4df3d72a7edbe8cf8520597fa50e0dbbc7"
+"""The already public sample (score 10/10) that ``HATCHING_LIVE_SUBMIT`` resubmits."""
 
 pytestmark = pytest.mark.skipif(not TOKEN, reason="HATCHING_TOKEN is not set")
 
@@ -303,41 +306,29 @@ async def test_profile_writes(client):
 
 @pytest.mark.skipif(not LIVE_SUBMIT, reason="HATCHING_LIVE_SUBMIT is not set to 1")
 async def test_resubmit_flagged_sample(client):
-    """Download a public sample the sandbox flagged (score > 1) and resubmit it.
+    """Download the pinned, already public, 10/10 sample and resubmit it.
 
-    Submissions are public on tria.ge and NOT deletable, so this is opt-in. The
+    Submissions are public on tria.ge and NOT deletable, so this is opt-in. It
+    always resubmits ``SUBMIT_SHA256`` so no new file is ever made public. The
     sample is only ever held in memory.
     """
 
-    picked = None
-    async for info in client.iter_samples(enums.SampleSubsets.PUBLIC, limit=100):
-        if info.status != enums.SubmissionStatuses.REPORTED or info.kind != enums.SampleKinds.FILE:
-            continue
-        summary = await client.sample_summary(info.id)
-        # Triage scores 1 (no threat detected, i.e. clean) to 10 (known bad).
-        if not isinstance(summary, base.SampleSummary) or (summary.score or 0) <= 1:
-            continue
-        if not summary.sha256:
-            continue
-        data = await client.download_sample(info.id)
-        if not data or len(data) > MAX_DOWNLOAD:
-            continue
-        picked = (info, summary, data)
-        break
+    summary = await client.sample_summary(SUBMIT_SHA256)
+    assert isinstance(summary, base.SampleSummary), f"pinned sample not found: {summary}"
+    assert summary.sha256 == SUBMIT_SHA256
+    # Triage scores 1 (no threat detected, i.e. clean) to 10 (known bad).
+    assert summary.score == 10, f"pinned sample's score is {summary.score}, not 10"
 
-    if picked is None:
-        pytest.skip("No recent reported, flagged public file sample was found.")
-    info, summary, data = picked
-    assert hashlib.sha256(data).hexdigest() == summary.sha256
+    data = await client.download_sample(SUBMIT_SHA256)
+    assert data, "pinned sample could not be downloaded"
+    assert hashlib.sha256(data).hexdigest() == SUBMIT_SHA256
 
     req = base.SubmissionRequest(
-        kind="file",
-        target=info.filename or summary.target or summary.sha256,
-        user_tags=["pyhatching-livetest"],
+        kind="file", target=SUBMIT_SHA256, user_tags=["pyhatching-livetest"]
     )
     sample = await client.submit_sample(req, data)
     assert isinstance(sample, base.SamplesResponse), f"submission failed: {sample}"
-    assert sample.id and sample.id != info.id
+    assert sample.id and sample.id != summary.sample
     assert sample.kind == enums.SampleKinds.FILE
 
     # The events stream reports the sample's current status on connect.
