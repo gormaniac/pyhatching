@@ -1,5 +1,9 @@
 ## Unreleased
 ### Features
+### Fixes
+
+## v1.1.0 - 2026-11-02
+### Features
 - Add `profiles_page`, `iter_profiles`, `users_page`, and `iter_users`, and a `base.ListPage` model for a single page of a paginated collection (with its `next` offset).
 ### Fixes
 - `get_profiles`, `get_users`, and `get_user_apikeys` now follow the API's pagination and return every item (`limit` caps how many), instead of only the first page with no way to get the next one.
