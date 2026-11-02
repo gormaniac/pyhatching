@@ -682,7 +682,8 @@ class FakeTriage:
 
     @staticmethod
     def _page(request: web.Request, items: list) -> web.Response:
-        limit = int(request.query.get("limit", 20))
+        # The API's default page size is 50, and its max is 200.
+        limit = min(int(request.query.get("limit", 50)), 200)
         offset = int(request.query.get("offset", 0) or 0)
         data = items[offset:offset + limit]
         nxt = str(offset + limit) if offset + limit < len(items) else None
@@ -1008,7 +1009,7 @@ class FakeTriage:
         uid = request.match_info["uid"]
         if uid not in self.users:
             return self._notfound("user")
-        return web.json_response({"data": self.apikeys.get(uid, [])})
+        return self._page(request, self.apikeys.get(uid, []))
 
     async def createKey(self, request: web.Request) -> web.Response:
         uid = request.match_info["uid"]

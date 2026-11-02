@@ -84,6 +84,17 @@ class SamplesResponse(SampleInfo):
     """Response object for POST /samples (and the items of search results)."""
 
 
+class ListPage(HatchingResponse):
+    """A single page of a paginated collection (ex. GET /profiles, GET /users).
+
+    ``data`` holds the page's items, as the model the endpoint's method documents.
+    ``next`` is the offset to request the next page with, ``None`` on the last page.
+    """
+
+    data: list[Any] = Field(default_factory=list)
+    next: Optional[str] = None
+
+
 class SamplesPage(HatchingResponse):
     """A single page of samples, from GET /samples or GET /search.
 
