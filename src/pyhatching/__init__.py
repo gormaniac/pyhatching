@@ -659,10 +659,14 @@ class PyHatchingClient:  # pylint: disable=R0904
         params = {"query": query, "limit": min(limit, MAX_PAGE_SIZE), "offset": offset}
         return await self._model(base.SamplesPage, "get", "/v0/search", params=params)
 
-    async def _pages(self, getpage, limit: int) -> AsyncIterator[base.SamplesPage | base.ErrorResponse]:
-        """Yield pages from ``getpage(limit, offset)`` until ``limit`` items (0 is no limit)."""
+    async def _pages(
+        self, getpage, limit: int, offset: int | str | None = None
+    ) -> AsyncIterator[base.SamplesPage | base.ListPage | base.ErrorResponse]:
+        """Yield pages from ``getpage(limit, offset)`` until ``limit`` items (0 is no limit).
 
-        offset = None
+        Starts at ``offset`` (the ``next`` value of an earlier page), or the first page.
+        """
+
         count = 0
         while True:
             size = MAX_PAGE_SIZE if not limit else min(MAX_PAGE_SIZE, limit - count)
@@ -686,13 +690,31 @@ class PyHatchingClient:  # pylint: disable=R0904
                 if limit and count >= limit:
                     return
 
-    async def _list(self, getpage, limit: int) -> list[base.SampleInfo] | base.ErrorResponse:
+    async def _list(
+        self, getpage, limit: int, offset: int | str | None = None
+    ) -> list | base.ErrorResponse:
         ret = []
-        async for page in self._pages(getpage, limit):
+        async for page in self._pages(getpage, limit, offset):
             if isinstance(page, base.ErrorResponse):
                 return page
             ret.extend(page.data)
         return ret[:limit] if limit else ret
+
+    async def _list_page(
+        self, model, uri: str, limit: int = MAX_PAGE_SIZE, offset: int | str | None = None
+    ) -> base.ListPage | base.ErrorResponse:
+        """Get a single page of a paginated collection, its items converted to ``model``."""
+
+        params = {"limit": min(limit, MAX_PAGE_SIZE), "offset": offset}
+        resp, resp_dict = await self._request("get", uri, params=params)
+        page = self.convert_resp(base.ListPage, resp, resp_dict)
+        if isinstance(page, base.ErrorResponse):
+            return page
+        page.data = [
+            item if isinstance(item, base.TriageModel)
+            else self.convert_resp(model, resp, item) for item in page.data
+        ]
+        return page
 
     async def iter_samples(
         self, subset: enums.SampleSubsets | str = enums.SampleSubsets.OWNED, limit: int = 20
@@ -1253,10 +1275,34 @@ class PyHatchingClient:  # pylint: disable=R0904
             base.HatchingProfileResponse, "get", f"/v0/profiles/{_seg(profile_id)}"
         )
 
+    async def profiles_page(
+        self, limit: int = MAX_PAGE_SIZE, offset: int | str | None = None
+    ) -> base.ListPage | base.ErrorResponse:
+        """Get a single page of your sandbox analysis profiles (GET /v0/profiles).
+
+        ``data`` holds ``base.HatchingProfileResponse`` items. ``offset`` is the
+        ``next`` value of the previous page.
+        """
+
+        return await self._list_page(base.HatchingProfileResponse, "/v0/profiles", limit, offset)
+
+    async def iter_profiles(self, limit: int = 0) -> AsyncIterator[base.HatchingProfileResponse]:
+        """Yield up to ``limit`` of your sandbox analysis profiles (0 for all of them)."""
+
+        async for profile in self._iter(self.profiles_page, limit):
+            yield profile
+
     async def get_profiles(
         self, limit: int | None = None, offset: int | str | None = None
     ) -> list[base.HatchingProfileResponse] | base.ErrorResponse:
-        """Get all sandbox analysis profiles for your account.
+        """Get your sandbox analysis profiles, following the API's pagination.
+
+        Parameters
+        ----------
+        limit : int | None, optional
+            The most profiles to return, None or 0 for all of them.
+        offset : int | str | None, optional
+            Start after a previous page (its ``next`` value), see ``profiles_page``.
 
         Returns
         -------
@@ -1266,12 +1312,7 @@ class PyHatchingClient:  # pylint: disable=R0904
             If there was an error.
         """
 
-        return await self._model(
-            base.HatchingProfileResponse,
-            "get",
-            "/v0/profiles",
-            params={"limit": limit, "offset": offset},
-        )
+        return await self._list(self.profiles_page, limit or 0, offset)
 
     async def submit_profile(
         self,
@@ -1448,14 +1489,34 @@ class PyHatchingClient:  # pylint: disable=R0904
 
     # ---- Users (private instances) ----
 
+    async def users_page(
+        self, limit: int = MAX_PAGE_SIZE, offset: int | str | None = None
+    ) -> base.ListPage | base.ErrorResponse:
+        """Get a single page of your company's users (GET /v0/users).
+
+        ``data`` holds ``base.User`` items. ``offset`` is the ``next`` value of the
+        previous page. Requires the manage_company permission.
+        """
+
+        return await self._list_page(base.User, "/v0/users", limit, offset)
+
+    async def iter_users(self, limit: int = 0) -> AsyncIterator[base.User]:
+        """Yield up to ``limit`` of your company's users (0 for all of them)."""
+
+        async for user in self._iter(self.users_page, limit):
+            yield user
+
     async def get_users(
         self, limit: int | None = None, offset: int | str | None = None
     ) -> list[base.User] | base.ErrorResponse:
-        """List the users of your company (requires admin permissions)."""
+        """List your company's users, following the API's pagination.
 
-        return await self._model(
-            base.User, "get", "/v0/users", params={"limit": limit, "offset": offset}
-        )
+        ``limit`` is the most users to return (None or 0 for all of them), and
+        ``offset`` starts after a previous page (its ``next`` value), see ``users_page``.
+        Requires the manage_company permission.
+        """
+
+        return await self._list(self.users_page, limit or 0, offset)
 
     async def get_user(self, user_id: str) -> base.User | base.ErrorResponse:
         """Get a user by ID (requires admin permissions)."""
@@ -1505,9 +1566,14 @@ class PyHatchingClient:  # pylint: disable=R0904
         return await self._empty("delete", f"/v0/users/{_seg(user_id)}")
 
     async def get_user_apikeys(self, user_id: str) -> list[base.ApiKey] | base.ErrorResponse:
-        """List the API keys of a user."""
+        """List every API key of a user, following the API's pagination."""
 
-        return await self._model(base.ApiKey, "get", f"/v0/users/{_seg(user_id)}/apikeys")
+        uri = f"/v0/users/{_seg(user_id)}/apikeys"
+
+        async def getpage(size, offset):
+            return await self._list_page(base.ApiKey, uri, size, offset)
+
+        return await self._list(getpage, 0)
 
     async def create_user_apikey(self, user_id: str, name: str) -> base.ApiKey | base.ErrorResponse:
         """Create a new API key for a user."""

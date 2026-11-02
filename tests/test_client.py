@@ -400,6 +400,46 @@ async def test_profiles(client, fake):
     assert err.error == "NOT_FOUND"
 
 
+async def test_profiles_pagination(client, fake):
+    for i in range(250):
+        fake.profiles[f"p{i}"] = {"id": f"p{i}", "name": f"p{i}", "tags": [], "network": ""}
+
+    # Every page is followed, in pages of the max size.
+    profiles = await client.get_profiles()
+    assert len(profiles) == 251 and all(isinstance(p, base.HatchingProfileResponse) for p in profiles)
+    assert [r["query"] for r in fake.requests if r["path"].endswith("/profiles")] == [
+        {"limit": "200"}, {"limit": "200", "offset": "200"}]
+
+    assert [p.name for p in await client.get_profiles(limit=3)] == ["win10-internet", "p0", "p1"]
+    assert fake.last()["query"] == {"limit": "3"}
+
+    page = await client.profiles_page(limit=100)
+    assert isinstance(page, base.ListPage) and len(page.data) == 100 and page.next == "100"
+    assert isinstance(page.data[0], base.HatchingProfileResponse)
+    page = await client.profiles_page(limit=500, offset=page.next)
+    assert len(page.data) == 151 and page.next is None
+    assert fake.last()["query"] == {"limit": "200", "offset": "100"}
+
+    # Starting from a previous page's offset.
+    rest = await client.get_profiles(offset="250")
+    assert [p.name for p in rest] == ["p249"]
+
+    names = [p.name async for p in client.iter_profiles(limit=201)]
+    assert len(names) == 201 and names[-1] == "p199"
+    assert len([p async for p in client.iter_profiles()]) == 251
+
+
+async def test_pagination_errors(fake):
+    async with pyhatching.PyHatchingClient("badkey", url=fake.url) as cli:
+        assert (await cli.get_profiles()).error == "UNAUTHORIZED"
+        assert (await cli.users_page()).error == "UNAUTHORIZED"
+        with pytest.raises(errors.PyHatchingApiError):
+            [u async for u in cli.iter_users()]
+    async with pyhatching.PyHatchingClient("badkey", url=fake.url, raise_on_api_err=True) as cli:
+        with pytest.raises(errors.PyHatchingApiError):
+            await cli.get_users()
+
+
 async def test_yara(client, fake):
     rules = await client.get_rules()
     assert rules.rules[0].name == "fake_rule.yara"
@@ -442,8 +482,26 @@ async def test_users(client, fake):
     assert await client.delete_user_apikey(new.id, "ci") is None
     assert await client.get_user_apikeys(new.id) == []
 
+    assert (await client.get_user_apikeys("nope")).error == "NOT_FOUND"
+
     assert await client.delete_user(new.id) is None
     assert (await client.get_user(new.id)).error == "NOT_FOUND"
+
+
+async def test_users_pagination(client, fake):
+    for i in range(60):
+        fake.users[f"user-x{i}"] = dict(ft.USER, id=f"user-x{i}", username=f"x{i}")
+    users = await client.get_users()
+    assert len(users) == 61 and isinstance(users[-1], base.User)
+    assert len(await client.get_users(limit=10)) == 10
+    assert len([u async for u in client.iter_users(limit=0)]) == 61
+    page = await client.users_page(limit=50)
+    assert len(page.data) == 50 and page.next == "50"
+
+    fake.apikeys[ft.USER["id"]] = [{"name": f"k{i}", "key": "k" * 40} for i in range(210)]
+    keys = await client.get_user_apikeys(ft.USER["id"])
+    assert len(keys) == 210 and isinstance(keys[0], base.ApiKey)
+    assert fake.last()["query"] == {"limit": "200", "offset": "200"}
 
 
 async def test_urlscan(client, fake):
