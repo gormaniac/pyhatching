@@ -1,6 +1,7 @@
 ## Unreleased
 ### Features
 ### Fixes
+- Match the live API in `pyhatching.testing`'s task report: DNS record types include their class (`"IN A"`), and `orig` is set on every process in the sample's tree.
 
 ## v1.0.0 - 2026-11-01
 ### Features
